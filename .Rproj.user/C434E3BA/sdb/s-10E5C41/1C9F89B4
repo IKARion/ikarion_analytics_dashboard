@@ -1,0 +1,20 @@
+{
+    "collab_server" : "",
+    "contents" : "\n# This is the server logic for a Shiny web application.\n# You can find out more about building applications with Shiny here:\n#\n# http://shiny.rstudio.com\n#\n\nlibrary(shiny)\n\nshinyServer(function(input, output) {\n\n  output$distPlot <- renderPlot({\n\n    # generate bins based on input$bins from ui.R\n    x    <- faithful[, 2]\n    bins <- seq(min(x), max(x), length.out = input$bins + 1)\n\n    # draw the histogram with the specified number of bins\n    hist(x, breaks = bins, col = 'darkgray', border = 'white')\n\n  })\n\n})\n",
+    "created" : 1525776955407.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "3547284186",
+    "id" : "1C9F89B4",
+    "lastKnownWriteTime" : 1500058132,
+    "last_content_update" : 1500058132,
+    "path" : "C:/Users/hecking/IKARion_intern/ikarion_data_infrastructure/Analytics and Intervention Dashboard/server.R",
+    "project_path" : "server.R",
+    "properties" : {
+    },
+    "relative_order" : 2,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

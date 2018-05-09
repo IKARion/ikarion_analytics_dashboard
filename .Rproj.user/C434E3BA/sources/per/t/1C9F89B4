@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1525776955407.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "3547284186",
+    "id" : "1C9F89B4",
+    "lastKnownWriteTime" : 1500058132,
+    "last_content_update" : 1500058132,
+    "path" : "C:/Users/hecking/IKARion_intern/ikarion_data_infrastructure/Analytics and Intervention Dashboard/server.R",
+    "project_path" : "server.R",
+    "properties" : {
+        "cursorPosition" : "21,0",
+        "scrollLine" : "0"
+    },
+    "relative_order" : 2,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
