@@ -1,36 +1,51 @@
 require(jsonlite)
 require(dplyr)
+require(magrittr)
 
-getData <- function(dataUrl) {
+endpoint <- "http://localhost:5000"
+
+getData <- function(...) {
   
-  fromJSON(dataUrl)
+  paste(endpoint, ..., sep="/") %>%
+    URLencode %>%
+    fromJSON
 }
 
-getCourseList <- function() {
+courseName <- function(nameDf) {
   
-  fromJSON("http://descartes.inf.uni-due.de:5000/user_model/courses") %>%
-    data_frame(course=.$courses)
+  nameDf %>% 
+    transmute(name=ifelse(is.na(en), de, en))
+}
+
+getCourses <- function() {
+  
+  res <- fromJSON(paste(endpoint, "user_model", "courses", sep="/"))
+  cNames <- courseName(res$courses$name)
+  
+  bind_cols(id=res$courses$courseid, cNames)
 }
 
 getUserList <- function(courseId) {
   
-  fromJSON(paste("http://descartes.inf.uni-due.de:5000/user_model", courseId, sep="/")) %>%
-    data_frame(user=.$users)
+  getData("user_model", courseId) %>%
+    as_data_frame
 }
 
 getActiveDaysUser <- function(userId, courseId) {
   
-  fromJSON(paste("http://descartes.inf.uni-due.de:5000/user_model/active_days", userId, courseId, sep="/")) %>%
-    data_frame(user=userId, active_day=.)
+  data_frame(
+    user=userId, activeDay=getData("user_model/active_days", userId, courseId)
+  )
 }
 
 getActiveDaysAll <- function(courseId) {
   
   getUserList(courseId) %>%
     rowwise %>%
-    do(getActiveDaysUser(.$user, courseId)) %>%
-    count(activeDay)
+    do(getActiveDaysUser(.$user, courseId)) %>% ungroup
 }
+
+
 
 getGroupLatencyTest <- function() {
   
