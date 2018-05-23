@@ -2,7 +2,7 @@ require(jsonlite)
 require(dplyr)
 require(magrittr)
 
-endpoint <- "http://localhost:5000"
+endpoint <- "http://descartes.inf.uni-due.de:5000"
 
 getData <- function(...) {
   
