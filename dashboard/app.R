@@ -12,7 +12,6 @@ source("data_utils.R")
 
 generateCourseList <- function() {
 
-  print("call")
   courseList <- list()
   cdf <- getCourses()
   courseList[cdf$name] <- cdf$id
@@ -23,15 +22,15 @@ generateCourseList <- function() {
 # Define UI for application that draws a histogram
 ui <- dashboardPage(
   skin = "black",
-  dashboardHeader(title = "IKARion Analytics and Intervention Dashboard"),
+  dashboardHeader(title = "IKARion Analytics"),
   dashboardSidebar(
     selectInput("courses", "Course", generateCourseList()),  
     dateRangeInput("time_range", 
       label = "Period", 
-      start = "2018-01-05",
-      end = "2018-01-07",
-      min = "2018-01-05",
-      max = "2018-01-08",
+      start = "2018-05-01",
+      end = "2018-05-31",
+      min = "2018-04-01",
+      max = "2018-12-30",
       format = "dd.mm.yyyy"),
     sidebarMenu(
       menuItem("User Models", tabName = "user_model", icon = icon("dashboard")),
@@ -44,7 +43,7 @@ ui <- dashboardPage(
     tabItem("user_model", 
       textInput("usermodeltext", "User model"),
       fluidRow(
-        downloadButton("download_UM", "Download Report"),
+        downloadButton("downloadUM", "Download User Model"),
         box(
           title = "Send users models to XPS",
           selectInput("send_interval_UM", "Interval", c("once", "hourly", "dayly", "weekly")),
@@ -74,7 +73,7 @@ ui <- dashboardPage(
     
     tabItem("group_model",
       fluidRow(
-        downloadButton("download_GM", "Download Report"),
+        downloadButton("downloadGM", "Download Group Model"),
         box(
           title = "Send group model to XPS",
           selectInput("send_interval_GM", "Interval", c("once", "hourly", "dayly", "weekly")),
@@ -85,8 +84,8 @@ ui <- dashboardPage(
       fluidRow(
         box(
           title = "Group Latency",
-          plotOutput("latencyPlot"),
-          sliderInput("latency_reference", "Reference point", min = 1, max=75, value=10)
+          plotOutput("latencyPlot") %>% withSpinner(color="grey"),
+          sliderInput("latency_reference", "Reference point", min = 1, max=250, value=10)
         ),
         box(
           title="Groups above reference",
@@ -104,41 +103,46 @@ server <- function(input, output) {
   ## Group model ##
   #################
   
-  gLatencies <- getGroupLatencyTest()  
-   output$latencyPlot <- renderPlot({
-     gLatencies %>%
-       ggplot(aes(x=latency)) + stat_ecdf() + 
-       geom_vline(xintercept = input$latency_reference) +
-       xlab("latency") +
-       ylab("% groups") +
-       theme_bw()
+  groupSequences <- reactive({
+    getGroupSequencesAll(input$courses)
+  })
+  groupLatencies <- reactive({
+    trange <- input$time_range 
+    start <- trange[1]# %>% as.POSIXlt %>% as.integer
+    end <- trange[2] #%>% as.POSIXlt %>% as.integer
+    getGroupLatencies2(groupSequences(), start, end)
+  })
+  # groupLatencies <- reactive({
+  #   getGroupLatencyTest()
+  # })
+  
+  output$latencyPlot <- renderPlot({
+   groupLatencies() %>%
+     ggplot(aes(x=latency)) + stat_ecdf() + 
+     geom_vline(xintercept = input$latency_reference) +
+     xlab("latency") +
+     ylab("% groups") +
+     theme_bw()
    })
    
    output$latencyGroups <- DT::renderDataTable(
-     gLatencies %>%
+     groupLatencies() %>%
        filter(latency > input$latency_reference) %>%
        DT::datatable()
    )
    
-   output$report <- downloadHandler(
-     filename = "group_model_report.html",
+   output$downloadGM <- downloadHandler(
+     filename = "group_model.json",
      content = function(file) {
-       # Copy the report file to a temporary directory before processing it, in
-       # case we don't have write permissions to the current working dir (which
-       # can happen when deployed).
-       tempReport <- file.path(tempdir(), "group_model_report.Rmd")
-       file.copy("group_model_report.Rmd", tempReport, overwrite = TRUE)
-       
-       # Set up parameters to pass to Rmd document
-       params <- list(latencyReference = input$latency_reference)
-       
-       # Knit the document, passing in the `params` list, and eval it in a
-       # child of the global environment (this isolates the code in the document
-       # from the code in this app).
-       rmarkdown::render(tempReport, output_file = file,
-                         params = params,
-                         envir = new.env(parent = globalenv())
-       )
+       model <- list(
+        model_metadata=list(
+          course_id=input$courses, 
+          period_from=input$time_range[1],
+          period_to=input$time_range[2]
+        ),
+        latencies=groupLatencies(),
+        sequences=(groupSequences() %>% group_by(group_id) %>% do(sequence=select(., -group_id)))
+       ) %>% toJSON() %>% writeLines(file)
      }
    )
    
@@ -146,10 +150,17 @@ server <- function(input, output) {
    ## User model ##
    ################
    
-   activeDays <- reactive({
-     getActiveDaysAll(input$courses)
+   activeDaysModel <- reactive({
+     
+     getActiveDaysAll(input$courses) %>%
+       mutate(activeDay=ymd(activeDay))
    })
    
+   activeDays <- reactive({
+     trange <- input$time_range 
+     
+     activeDaysModel() %>% filter((activeDay >= trange[1]) & (activeDay <= trange[2]))
+   })
    output$activeDaysBox <- renderValueBox({
      
      valueBox(
@@ -183,6 +194,20 @@ server <- function(input, output) {
        filter(n < input$active_days_reference) %>%
        rename("Active Days" = n) %>%
        DT::datatable()
+   )
+   
+   output$downloadUM <- downloadHandler(
+     filename = "user_model.json",
+     content = function(file) {
+       model <- list(
+         model_metadata=list(
+           course_id=input$courses, 
+           period_from=input$time_range[1],
+           period_to=input$time_range[2]
+         ),
+         activeDays=(activeDays() %>% group_by(user) %>% do(activeDays=select(., activeDay)))
+       ) %>% toJSON() %>% writeLines(file)
+     }
    )
 }
 
