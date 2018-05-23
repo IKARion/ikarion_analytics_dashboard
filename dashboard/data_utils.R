@@ -7,7 +7,7 @@ endpoint <- "http://descartes.inf.uni-due.de:5000"
 getData <- function(...) {
   
   paste(endpoint, ..., sep="/") %>%
-    URLencode %>% # %T>%
+    URLencode %>% #%T>%
     #print %>%
     fromJSON %>% 
     extract2("data")

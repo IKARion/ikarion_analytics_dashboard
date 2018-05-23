@@ -8,6 +8,11 @@ if (!require(magrittr)) {
   require(magrittr)
 }
 
+if (!(require(lubridate))) {
+  install.packages("lubridate")
+  require(lubridate)
+}
+
 if (!require(ggplot2)) {
   install.packages("ggplot2")
   require(ggplot2)
