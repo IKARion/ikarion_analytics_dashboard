@@ -153,7 +153,7 @@ server <- function(input, output, session) {
    
    observeEvent(input$GM_to_XPS, {
      createGroupModel() %>% sendModelToXPS
-     session$sendCustomMessage(type="Model send", "Model successfully send to XPS.")
+     showNotification("Model successfully send to XPS.")
    })
    
    ################
@@ -228,7 +228,7 @@ server <- function(input, output, session) {
    observeEvent(input$UM_to_XPS, {
      print("send user model")
      createUserModel() %>% sendModelToXPS
-     session$sendCustomMessage(type="Model send", "Model successfully send to XPS.")
+     showNotification("Model successfully send to XPS.")
    })
 }
 
