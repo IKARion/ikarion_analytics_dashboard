@@ -9,6 +9,7 @@
 
 source("setup.R")
 source("data_utils.R")
+source("xps_utils.R")
 
 generateCourseList <- function() {
 
@@ -47,7 +48,7 @@ ui <- dashboardPage(
         box(
           title = "Send users models to XPS",
           selectInput("send_interval_UM", "Interval", c("once", "hourly", "dayly", "weekly")),
-          actionButton("send_to_xps_UM", "Send")
+          actionButton("UM_to_XPS", "Send")
         )
       ),
       fluidRow(
@@ -77,7 +78,7 @@ ui <- dashboardPage(
         box(
           title = "Send group model to XPS",
           selectInput("send_interval_GM", "Interval", c("once", "hourly", "dayly", "weekly")),
-          actionButton("send_to_xps_GM", "Send")
+          actionButton("GM_to_XPS", "Send")
         )
       ),
       # Boxes need to be put in a row (or column)
@@ -97,7 +98,7 @@ ui <- dashboardPage(
 )
 
 # Define server logic required to draw a histogram
-server <- function(input, output) {
+server <- function(input, output, session) {
  
   #################
   ## Group model ##
@@ -115,6 +116,18 @@ server <- function(input, output) {
   # groupLatencies <- reactive({
   #   getGroupLatencyTest()
   # })
+  
+  createGroupModel <- reactive({
+    list(
+      model_metadata=list(
+        course_id=input$courses, 
+        period_from=input$time_range[1],
+        period_to=input$time_range[2]
+      ),
+      latencies=groupLatencies(),
+      sequences=(groupSequences() %>% group_by(group_id) %>% do(sequence=select(., -group_id)))
+    )
+  })
   
   output$latencyPlot <- renderPlot({
    groupLatencies() %>%
@@ -134,17 +147,14 @@ server <- function(input, output) {
    output$downloadGM <- downloadHandler(
      filename = "group_model.json",
      content = function(file) {
-       model <- list(
-        model_metadata=list(
-          course_id=input$courses, 
-          period_from=input$time_range[1],
-          period_to=input$time_range[2]
-        ),
-        latencies=groupLatencies(),
-        sequences=(groupSequences() %>% group_by(group_id) %>% do(sequence=select(., -group_id)))
-       ) %>% toJSON() %>% writeLines(file)
+       createGroupModel() %>% toJSON() %>% writeLines(file)
      }
    )
+   
+   observeEvent(input$GM_to_XPS, {
+     createGroupModel() %>% sendModelToXPS
+     session$sendCustomMessage(type="Model send", "Model successfully send to XPS.")
+   })
    
    ################
    ## User model ##
@@ -161,6 +171,18 @@ server <- function(input, output) {
      
      activeDaysModel() %>% filter((activeDay >= trange[1]) & (activeDay <= trange[2]))
    })
+   
+   createUserModel <- reactive({
+     list(
+       model_metadata=list(
+         course_id=input$courses, 
+         period_from=input$time_range[1],
+         period_to=input$time_range[2]
+       ),
+       activeDays=(activeDays() %>% group_by(user) %>% do(activeDays=select(., activeDay)))
+     )
+   })
+   
    output$activeDaysBox <- renderValueBox({
      
      valueBox(
@@ -199,16 +221,15 @@ server <- function(input, output) {
    output$downloadUM <- downloadHandler(
      filename = "user_model.json",
      content = function(file) {
-       model <- list(
-         model_metadata=list(
-           course_id=input$courses, 
-           period_from=input$time_range[1],
-           period_to=input$time_range[2]
-         ),
-         activeDays=(activeDays() %>% group_by(user) %>% do(activeDays=select(., activeDay)))
-       ) %>% toJSON() %>% writeLines(file)
+       createModel() %>% toJSON() %>% writeLines(file)
      }
    )
+   
+   observeEvent(input$UM_to_XPS, {
+     print("send user model")
+     createUserModel() %>% sendModelToXPS
+     session$sendCustomMessage(type="Model send", "Model successfully send to XPS.")
+   })
 }
 
 # Run the application 
