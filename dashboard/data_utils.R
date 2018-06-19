@@ -45,7 +45,7 @@ getGroupList <- function(courseId) {
 getActiveDaysUser <- function(userId, courseId) {
   
   data_frame(
-    user=digest::sha1(userId), activeDay=getData("user_model/active_days", userId, courseId)
+    user=substring(digest::sha1(userId),1,8), activeDay=getData("user_model/active_days", userId, courseId)
   )
 }
 
