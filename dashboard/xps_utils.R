@@ -1,9 +1,9 @@
 require(httr)
 require(digest)
 require(jsonlite)
-xpsEndpoint <- "http://[host]:[port]/"
-managementEndpoint <- "http://descartes.inf.uni-due.de:5000/management"
-
+xpsEndpoint <- "http://cosa-app.fh-luebeck.de:50101"
+#managementEndpoint <- "http://descartes.inf.uni-due.de:5000/management"
+managementEndpoint <- "http://localhost:5000/management"
 buildCustomScript <- function(model, scriptTemplate) {
   
   c(paste("course <-", model$model_metadata$course_id),
@@ -17,9 +17,9 @@ addScheduledTask <- function(model, interval, scriptTemplate, label) {
   sendModelToXPS(model)
   
   if (interval %in% c("minute", "hour")) {
-    
+    frequencyMinutes <- 1
     if (interval == "hour") {
-      interval <- interval * 60
+      frequencyMinutes <- 60
     }
     filename <- digest(model$model_metadata) # hash of metadata becomes filename to avoid duplicates.
     buildCustomScript(model, scriptTemplate) %>%
@@ -29,7 +29,8 @@ addScheduledTask <- function(model, interval, scriptTemplate, label) {
       paste(collapse="\n")
     uri <- tools::file_path_as_absolute(filename)
     
-    paste(managementEndpoint, "add_r_script", description, interval, uri) %>% GET
+    paste(managementEndpoint, "add_r_script", replaceUrlChars(description), frequencyMinutes, 
+          replaceUrlChars(uri), sep="/") %>% URLencode %>% GET
   }
 }
 

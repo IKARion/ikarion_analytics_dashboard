@@ -150,6 +150,8 @@ server <- function(input, output, session) {
     createUserModel() %>%  addScheduledTask(input$send_interval_UM, "script_templates/active_days_template.R", "user_model")
     showNotification("Model successfully send to XPS.")
   })
+  
+  callModule(modelsToXps, "xps")
 }
 
 # Run the application 
