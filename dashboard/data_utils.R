@@ -3,54 +3,70 @@ require(dplyr)
 require(magrittr)
 
 endpoint <- "http://descartes.inf.uni-due.de:5000"
+#endpoint <- "http://0.0.0.0:5000" 
+
+replaceUrlChars <- function(string) {
+  string <- gsub("/", "$slash$", string)
+  string <- gsub("?", "$qmark$", string, fixed = T)
+}
 
 getData <- function(...) {
   
   paste(endpoint, ..., sep="/") %>%
-    URLencode %>% #%T>%
-    #print %>%
+    URLencode %>%
     fromJSON %>% 
     extract2("data")
 }
 
+###
+# ENCODE GROUP NOT COMPLETE URL
+###
+
 courseName <- function(nameDf) {
   
   nameDf %>% 
-    transmute(name=ifelse(is.na(en), de, en))
+  transmute(name=ifelse(is.na(en), de, en))
 }
 
 getCourses <- function() {
   
   res <- getData("user_model/courses") %>% 
     distinct(courseid, .keep_all = TRUE)
+  
   cNames <- courseName(res$name)
   
   bind_cols(id=res$courseid, cNames)
 }
 
 getUserList <- function(courseId) {
-  
+
+  courseId <- replaceUrlChars(courseId)
   data_frame(
     user=getData("user_model", courseId)
   )
 }
 
 getGroupList <- function(courseId) {
-  
+
+  courseId <- replaceUrlChars(courseId)
   data_frame(
-    group=getData("user_model/groups_for_course", courseId)
+    group=getData("user_model/groups_for_course", courseId) 
   )
+  
 }
 
 getActiveDaysUser <- function(userId, courseId) {
+
+  courseId <- replaceUrlChars(courseId)
   
   data_frame(
-    user=digest::sha1(userId), activeDay=getData("user_model/active_days", userId, courseId)
+    user=substring(digest::sha1(userId),1,8), activeDay=getData("user_model/active_days", userId, courseId)
   )
 }
 
 getActiveDaysAll <- function(courseId) {
-  
+  print("get active days all")
+  courseId <- replaceUrlChars(courseId)
   getUserList(courseId) %>%
     rowwise %>%
     do(getActiveDaysUser(.$user, courseId)) %>% ungroup
@@ -58,18 +74,64 @@ getActiveDaysAll <- function(courseId) {
 
 getGroupSequence <- function(courseId, groupId) {
   
-  getData("user_model/group_activities", courseId, groupId) %>% as_data_frame
+  courseId <- replaceUrlChars(courseId)
+  getData("user_model/group_activities", courseId, groupId) %>% as_data_frame #%>% 
+}
+
+getGroupRepositories <- function() {
+  data_frame(repo=getData("user_model/repositories"))
+}
+
+getGroupSequenceGit <- function(repo) {
+
+  repo <- replaceUrlChars(repo)
+  data <- getData("user_model/repo_activities",repo) %>% as_data_frame
+}
+
+getGitSequencesAll <- function() {
+  
+  repos <- getGroupRepositories()
+  #courseId <- replaceUrlChars(courseId)
+  getGroupRepositories() %>% 
+    rowwise %>% 
+    do(getGroupSequenceGit(.$repo))
+  
 }
 
 getGroupSequencesAll <- function(courseId) {
   
+  courseId <- replaceUrlChars(courseId)
   getGroupList(courseId) %>%
     rowwise %>%
     do(getGroupSequence(courseId, .$group))
 }
 
-getGroupLatencies2 <- function(groupSequences, start, end) {
+getGitCommitLatencies <- function(start, end) {
+  
+  start %<>% as.POSIXct %>% as.integer
+  end %<>% as.POSIXct %>% as.integer
+  
+  groupSequences %>%
+    group_by(group_id) %>%
+    filter((verb_id == "http://id.tincanapi.com/verb/replied") & 
+             (timestamp >= start) & (timestamp <= end)) %>%
+    arrange(timestamp) %>%
+    do({
+      ts <- append(start, .$timestamp, end)
+      mLatency <- sapply(2:length(ts), function(i) {
+        
+        seconds_to_period(ts[i] - ts[i - 1]) %>% time_length("hour")
+      }) %>% mean %>% round(2)
+      
+      data_frame(latency=mLatency)
+    }) %>% 
+    mutate(group=paste("Group", group_id))
+  
+}
 
+
+getGroupLatencies2 <- function(groupSequences, start, end) {
+  
   start %<>% as.POSIXct %>% as.integer
   end %<>% as.POSIXct %>% as.integer
 
@@ -81,31 +143,58 @@ getGroupLatencies2 <- function(groupSequences, start, end) {
     do({
       ts <- append(start, .$timestamp, end)
       mLatency <- sapply(2:length(ts), function(i) {
-  
+        
         seconds_to_period(ts[i] - ts[i - 1]) %>% time_length("hour")
       }) %>% mean %>% round(2)
-  
+      
       data_frame(latency=mLatency)
     }) %>% 
     mutate(group=paste("Group", group_id))
 }
 
+# calculate the latencies between activities in the bitbucket 
+getCommitLatencies <- function(groupGitSequences, start, end) {
+  
+  start %<>% as.POSIXct %>% as.integer
+  end %<>% as.POSIXct %>% as.integer
+  
+  groupGitSequences %>%
+    group_by(group_id) %>%
+    #filter((verb_id == "http://id.tincanapi.com/verb/replied") & 
+    filter((verb_id == "http://activitystrea.ms/schema/1.0/update") & 
+             (timestamp >= start) & (timestamp <= end)) %>%
+    arrange(timestamp) %>%
+    do({
+      ts <- append(start, .$timestamp, end)
+      mLatency <- sapply(2:length(ts), function(i) {
+        
+        seconds_to_period(ts[i] - ts[i - 1]) %>% time_length("hour")
+      }) %>% mean %>% round(2)
+      
+      data_frame(latency=mLatency)
+    }) %>% 
+    mutate(group=paste("Group", group_id)) #%>% 
+    #print()
+  
+}
+
 getGroupLatencies <- function(courseId, start, end) {
   
+  courseId <- replaceUrlChars(courseId)
   getGroupSequencesAll(courseId) %>%
     group_by(group_id) %>%
     filter((verb_id == "http://id.tincanapi.com/verb/replied") & 
              (timestamp >= start) & (timestamp <= end)) %>%
     arrange(timestamp) #%>%
-    # do({
-    #   ts <- append(start, .$timestamp, end)
-    #   mLatency <- sapply(2:length(ts), function(i) {
-    #     
-    #     seconds_to_period(ts[i] - ts[i - 1]) %>% time_length("hour")
-    #   }) %>% mean
-    #   
-    #   data_frame(group=paste("Group", .$group_id), latency=mLatency)
-    # })
+  # do({
+  #   ts <- append(start, .$timestamp, end)
+  #   mLatency <- sapply(2:length(ts), function(i) {
+  #     
+  #     seconds_to_period(ts[i] - ts[i - 1]) %>% time_length("hour")
+  #   }) %>% mean
+  #   
+  #   data_frame(group=paste("Group", .$group_id), latency=mLatency)
+  # })
 }
 
 getGroupLatencyTest <- function() {

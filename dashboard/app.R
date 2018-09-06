@@ -11,14 +11,18 @@ source("setup.R")
 source("data_utils.R")
 source("xps_utils.R")
 
-generateCourseList <- function() {
+# Load modules
+source("modules/user_active_days_module.R")
+source("modules/group_latency_module.R")
+source("modules/xps_module.R")
 
+generateCourseList <- function() {
+  
   courseList <- list()
   cdf <- getCourses()
   courseList[cdf$name] <- cdf$id
   courseList
 }
-
 
 # Define UI for application that draws a histogram
 ui <- dashboardPage(
@@ -27,95 +31,64 @@ ui <- dashboardPage(
   dashboardSidebar(
     selectInput("courses", "Course", generateCourseList()),  
     dateRangeInput("time_range", 
-      label = "Period", 
-      start = "2018-05-01",
-      end = "2018-05-31",
-      min = "2018-04-01",
-      max = "2018-12-30",
-      format = "dd.mm.yyyy"),
-    sidebarMenu(
+                   label = "Period", 
+                   start = "2018-05-01",
+                   end = "2018-05-30",
+                   min = "2018-04-01",
+                   max = "2018-12-30",
+                   format = "dd.mm.yyyy"),
+    sidebarMenu(id="tabs",
       menuItem("User Models", tabName = "user_model", icon = icon("dashboard")),
-      menuItem("Group Models", tabName = "group_model", icon = icon("dashboard"))  
+      menuItem("Group Models", tabName = "group_model", icon = icon("dashboard")),
+      menuItem("XPS", tabName = "xps", icon = icon("calendar"))
     )
   ),
   
   dashboardBody(
     tabItems(
-    tabItem("user_model", 
-      textInput("usermodeltext", "User model"),
-      fluidRow(
-        downloadButton("downloadUM", "Download User Model"),
-        box(
-          title = "Send users models to XPS",
-          selectInput("send_interval_UM", "Interval", c("once", "hourly", "dayly", "weekly")),
-          actionButton("UM_to_XPS", "Send")
-        )
+      tabItem("user_model", 
+              textInput("usermodeltext", "User model"),
+              fluidRow(
+                downloadButton("downloadUM", "Download User Model"),
+                box(
+                  title = "Send users models to XPS",
+                  selectInput("send_interval_UM", "Interval", c("once", "minute", "hour")),
+                  actionButton("UM_to_XPS", "Send")
+                )
+              ),
+              userActiveDaysUI("user_active_days")
       ),
-      fluidRow(
-        valueBoxOutput("activeDaysBox"),
-        box(
-          title = "Active students (days)",
-          plotOutput("activeDaysPlot") %>% withSpinner(color="grey")
-        )
+      
+      
+      tabItem("group_model",
+              fluidRow(
+                downloadButton("downloadGM", "Download Group Model"),
+                box(
+                  title = "Send group model to XPS",
+                  selectInput("send_interval_GM", "Interval", c("once", "minute", "hour")),
+                  actionButton("GM_to_XPS", "Send")
+                )
+              ),
+              groupLatencyUI("group_latencies")#,
+              #commitLatencyUI("commit_latencies")
+            
       ),
-      fluidRow(
-        box(
-          title = "Active days (cumulative)",
-          plotOutput("activeDaysCumPlot") %>% withSpinner(color="grey"),
-          sliderInput("active_days_reference", "Reference point", min = 1, max=30, value=2)
-        ),
-        box(
-          title="Users below reference",
-          DT::dataTableOutput("activeDaysUsers")
-        )
+      tabItem("xps", 
+              modelsToXpsUI("xps")
       )
-    ),
-    
-    
-    tabItem("group_model",
-      fluidRow(
-        downloadButton("downloadGM", "Download Group Model"),
-        box(
-          title = "Send group model to XPS",
-          selectInput("send_interval_GM", "Interval", c("once", "hourly", "dayly", "weekly")),
-          actionButton("GM_to_XPS", "Send")
-        )
-      ),
-      # Boxes need to be put in a row (or column)
-      fluidRow(
-        box(
-          title = "Group Latency",
-          plotOutput("latencyPlot") %>% withSpinner(color="grey"),
-          sliderInput("latency_reference", "Reference point", min = 1, max=250, value=10)
-        ),
-        box(
-          title="Groups above reference",
-          DT::dataTableOutput("latencyGroups")
-        )
-      )
-    )
-  ))
+    ))
 )
 
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
- 
+  
+  
   #################
   ## Group model ##
   #################
-  
-  groupSequences <- reactive({
-    getGroupSequencesAll(input$courses)
-  })
-  groupLatencies <- reactive({
-    trange <- input$time_range 
-    start <- trange[1]# %>% as.POSIXlt %>% as.integer
-    end <- trange[2] #%>% as.POSIXlt %>% as.integer
-    getGroupLatencies2(groupSequences(), start, end)
-  })
-  # groupLatencies <- reactive({
-  #   getGroupLatencyTest()
-  # })
+  groupData <- callModule(groupLatency, "group_latencies", reactive(input$courses), reactive(input$time_range))
+  groupSequences <- groupData$sequences
+  groupLatencies <- groupData$latencies
   
   createGroupModel <- reactive({
     list(
@@ -125,111 +98,58 @@ server <- function(input, output, session) {
         period_to=input$time_range[2]
       ),
       latencies=groupLatencies(),
+      # add commit latencies to list
+      commitLatencies <- groupCommitLatencies(),
       sequences=(groupSequences() %>% group_by(group_id) %>% do(sequence=select(., -group_id)))
     )
   })
   
-  output$latencyPlot <- renderPlot({
-   groupLatencies() %>%
-     ggplot(aes(x=latency)) + stat_ecdf() + 
-     geom_vline(xintercept = input$latency_reference) +
-     xlab("latency") +
-     ylab("% groups") +
-     theme_bw()
-   })
-   
-   output$latencyGroups <- DT::renderDataTable(
-     groupLatencies() %>%
-       filter(latency > input$latency_reference) %>%
-       DT::datatable()
-   )
-   
-   output$downloadGM <- downloadHandler(
-     filename = "group_model.json",
-     content = function(file) {
-       createGroupModel() %>% toJSON() %>% writeLines(file)
-     }
-   )
-   
-   observeEvent(input$GM_to_XPS, {
-     createGroupModel() %>% sendModelToXPS
-     showNotification("Model successfully send to XPS.")
-   })
-   
-   ################
-   ## User model ##
-   ################
-   
-   activeDaysModel <- reactive({
-     
-     getActiveDaysAll(input$courses) %>%
-       mutate(activeDay=ymd(activeDay))
-   })
-   
-   activeDays <- reactive({
-     trange <- input$time_range 
-     
-     activeDaysModel() %>% filter((activeDay >= trange[1]) & (activeDay <= trange[2]))
-   })
-   
-   createUserModel <- reactive({
-     list(
-       model_metadata=list(
-         course_id=input$courses, 
-         period_from=input$time_range[1],
-         period_to=input$time_range[2]
-       ),
-       activeDays=(activeDays() %>% group_by(user) %>% do(activeDays=select(., activeDay)))
-     )
-   })
-   
-   output$activeDaysBox <- renderValueBox({
-     
-     valueBox(
-       activeDays()$user %>% unique %>% length,
-       subtitle = "Number of active students",
-       icon = icon("user"),
-       color = "purple"
-     )
-   })
-   output$activeDaysPlot <- renderPlot({
-     
-     activeDays() %>%
-       count(activeDay) %>%
-       ggplot(aes(x=activeDay, y=n)) + geom_bar(stat="identity") + theme(axis.text.x = element_text(angle=90))
-   })
-   
-   output$activeDaysCumPlot <- renderPlot({
-     
-     activeDays() %>%
-       count(user) %>%
-       ggplot(aes(x=n)) + stat_ecdf() + 
-       geom_vline(xintercept = input$active_days_reference) +
-       xlab("active days") +
-       ylab("% users") +
-       theme_bw()
-   })
-   
-   output$activeDaysUsers <- DT::renderDataTable(
-     activeDays() %>%
-       count(user, sort=TRUE) %>%
-       filter(n < input$active_days_reference) %>%
-       rename("Active Days" = n) %>%
-       DT::datatable()
-   )
-   
-   output$downloadUM <- downloadHandler(
-     filename = "user_model.json",
-     content = function(file) {
-       createModel() %>% toJSON() %>% writeLines(file)
-     }
-   )
-   
-   observeEvent(input$UM_to_XPS, {
-     print("send user model")
-     createUserModel() %>% sendModelToXPS
-     showNotification("Model successfully send to XPS.")
-   })
+  # output$GroupRepos <- DT::renderDataTable(
+  #   
+  #   getGroupRepositories()
+  # )
+  
+  output$downloadGM <- downloadHandler(
+    filename = "group_model.json",
+    content = function(file) {
+      createGroupModel() %>% toJSON() %>% writeLines(file)
+    }
+  )
+  
+  observeEvent(input$GM_to_XPS, {
+    createGroupModel() %>% addScheduledTask(input$send_interval_GM, "script_templates/group_template.R", "group_model")
+    showNotification("Model successfully send to XPS.")
+  })
+  
+  
+  ################
+  ## User model ##
+  ################
+  activeDays <- callModule(userActiveDays, "user_active_days", reactive(input$courses), reactive(input$time_range))
+  
+  createUserModel <- reactive({
+    list(
+      model_metadata=list(
+        course_id=input$courses, 
+        period_from=input$time_range[1],
+        period_to=input$time_range[2]
+      ),
+      activeDays=(activeDays() %>% group_by(user) %>% do(activeDays=select(., activeDay)))
+    )
+  })
+  
+  output$downloadUM <- downloadHandler(
+    filename = "user_model.json",
+    content = function(file) {
+      createUserModel() %>% toJSON() %>% writeLines(file)
+    }
+  )
+  
+  observeEvent(input$UM_to_XPS, {
+    print("send user model")
+    createUserModel() %>%  addScheduledTask(input$send_interval_UM, "script_templates/active_days_template.R", "user_model")
+    showNotification("Model successfully send to XPS.")
+  })
 }
 
 # Run the application 
