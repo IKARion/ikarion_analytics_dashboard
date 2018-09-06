@@ -2,8 +2,8 @@ require(jsonlite)
 require(dplyr)
 require(magrittr)
 
-endpoint <- "http://descartes.inf.uni-due.de:5000"
-#endpoint <- "http://0.0.0.0:5000" 
+#endpoint <- "http://descartes.inf.uni-due.de:5000"
+endpoint <- "http://localhost:5000" 
 
 replaceUrlChars <- function(string) {
   string <- gsub("/", "$slash$", string)
@@ -23,19 +23,15 @@ getData <- function(...) {
 ###
 
 courseName <- function(nameDf) {
-  
+  print(nameDf)
   nameDf %>% 
   transmute(name=ifelse(is.na(en), de, en))
 }
 
 getCourses <- function() {
   
-  res <- getData("user_model/courses") %>% 
+  getData("user_model/courses") %>% 
     distinct(courseid, .keep_all = TRUE)
-  
-  cNames <- courseName(res$name)
-  
-  bind_cols(id=res$courseid, cNames)
 }
 
 getUserList <- function(courseId) {

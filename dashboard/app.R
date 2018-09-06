@@ -20,7 +20,7 @@ generateCourseList <- function() {
   
   courseList <- list()
   cdf <- getCourses()
-  courseList[cdf$name] <- cdf$id
+  courseList[cdf$name] <- cdf$courseid
   courseList
 }
 
@@ -99,7 +99,7 @@ server <- function(input, output, session) {
       ),
       latencies=groupLatencies(),
       # add commit latencies to list
-      commitLatencies <- groupCommitLatencies(),
+      #commitLatencies <- groupCommitLatencies(),
       sequences=(groupSequences() %>% group_by(group_id) %>% do(sequence=select(., -group_id)))
     )
   })
