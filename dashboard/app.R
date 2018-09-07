@@ -82,7 +82,6 @@ ui <- dashboardPage(
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
   
-  
   #################
   ## Group model ##
   #################
@@ -95,7 +94,8 @@ server <- function(input, output, session) {
       model_metadata=list(
         course_id=input$courses, 
         period_from=input$time_range[1],
-        period_to=input$time_range[2]
+        period_to=input$time_range[2],
+        group_task="None"
       ),
       latencies=groupLatencies(),
       # add commit latencies to list
@@ -119,6 +119,7 @@ server <- function(input, output, session) {
   observeEvent(input$GM_to_XPS, {
     createGroupModel() %>% addScheduledTask(input$send_interval_GM, "script_templates/group_template.R", "group_model")
     showNotification("Model successfully send to XPS.")
+    callModule(modelsToXps, "xps")
   })
   
   
@@ -149,6 +150,7 @@ server <- function(input, output, session) {
     print("send user model")
     createUserModel() %>%  addScheduledTask(input$send_interval_UM, "script_templates/active_days_template.R", "user_model")
     showNotification("Model successfully send to XPS.")
+    callModule(modelsToXps, "xps")
   })
   
   callModule(modelsToXps, "xps")

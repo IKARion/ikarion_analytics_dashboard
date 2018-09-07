@@ -13,7 +13,7 @@ buildCustomScript <- function(model, scriptTemplate) {
 }
 
 addScheduledTask <- function(model, interval, scriptTemplate, label) {
-  
+
   sendModelToXPS(model)
   
   if (interval %in% c("minute", "hour")) {
