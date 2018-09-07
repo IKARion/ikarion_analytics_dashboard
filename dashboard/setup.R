@@ -1,3 +1,18 @@
+if (!require(httr)) {
+  install.packages("httr")
+  require(httr)
+}
+
+if (!require(ngram)) {
+  install.packages("ngram")
+  require(ngram)
+}
+
+if (!require(reldist)) {
+  install.packages("reldist")
+  require(reldist)
+}
+
 if (!require(dplyr)) {
   install.packages("dplyr")
   require(dplyr)
