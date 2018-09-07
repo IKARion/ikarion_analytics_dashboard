@@ -6,7 +6,7 @@ modelsToXpsUI <- function(id, label) {
 }
 
 modelsToXps <- function(input, output, session) {
-  
+
   output$models_to_xps <- DT::renderDataTable(
     getScheduledTasks() %>%
       DT::datatable()
