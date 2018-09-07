@@ -33,7 +33,7 @@ ui <- dashboardPage(
     dateRangeInput("time_range", 
                    label = "Period", 
                    start = "2018-05-01",
-                   end = "2018-05-30",
+                   end = "2018-09-30",
                    min = "2018-04-01",
                    max = "2018-12-30",
                    format = "dd.mm.yyyy"),
@@ -100,7 +100,8 @@ server <- function(input, output, session) {
       latencies=groupLatencies(),
       # add commit latencies to list
       #commitLatencies <- groupCommitLatencies(),
-      sequences=(groupSequences() %>% group_by(group_id) %>% do(sequence=select(., -group_id)))
+      #sequences=(groupSequences() %>% group_by(group_id) %>% do(sequence=select(., -group_id)))
+      sequences=(groupSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated") %>%  group_by(group_id) %>% do(sequence=select(., -group_id)))
     )
   })
   
@@ -159,3 +160,62 @@ server <- function(input, output, session) {
 # Run the application 
 shinyApp(ui = ui, server = server)
 
+
+# ###
+# 
+# # clean html tags from forum posts
+# htmlTagClean <- function(htmlString) {
+#   return(gsub("<.*?>", "", htmlString))
+# }
+# 
+# # get group sequences for course "http://localhost/ikarion_moodle/course/view.php?id=6" for groups 17, 18
+# seq17 <- getGroupSequence("http://localhost/ikarion_moodle/course/view.php?id=6",17)
+# seq18 <- getGroupSequence("http://localhost/ikarion_moodle/course/view.php?id=6",18)
+# 
+# 
+# # filter to only countain forum and wiki activities
+# s7 <- seq17 %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated")
+# s8 <- seq18 %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated")
+# 
+# 
+# ## FORUM ACTIVITIES
+# 
+# # filter to only contain forum activities
+# f_s7 <- s7 %>% filter(verb_id == "http://id.tincanapi.com/verb/replied")
+# f_s8 <- s8 %>% filter(verb_id == "http://id.tincanapi.com/verb/replied")
+# 
+# # add new column with cleaned forum content
+# cleaned_df7 <- mutate(f_s7, cleaned_content = htmlTagClean(forum_content))
+# cleaned_df8 <- mutate(f_s8, cleaned_content = htmlTagClean(forum_content))
+# 
+# # try wordcount instead of character count
+# #cleaned_df7 <- mutate(cleaned_df7, word_count = wordcount(cleaned_content)) // wordcount function calculates sum of words for all fields in column; should only calculate it for one field
+# 
+# # add new column with character count for each activity
+# cleaned_df7 <- mutate(cleaned_df7, char_count = nchar(cleaned_content))
+# cleaned_df8 <- mutate(cleaned_df8, char_count = nchar(cleaned_content))
+# 
+# # calculate sum of characters for all forum posts for each user
+# user_contribution7 <- cleaned_df7 %>%
+#   group_by(user_id) %>%
+#   summarise(char_count_sum = sum(char_count))
+# 
+# user_contribution8 <- cleaned_df8 %>%
+#   group_by(user_id) %>%
+#   summarise(char_count_sum = sum(char_count))
+# 
+# library(reldist)
+# 
+# gini(user_contribution8$char_count_sum)
+# gini(user_contribution7$char_count_sum)
+# 
+# # calculate normalized gini coefficient for one group
+# gini(user_contribution7$char_count_sum)*length(user_contribution7$char_count_sum)/(length(user_contribution7$char_count_sum)-1)
+# gini(user_contribution8$char_count_sum)*length(user_contribution8$char_count_sum)/(length(user_contribution8$char_count_sum)-1)
+# 
+# 
+# ## WIKI CONTRIBUTIONS
+# 
+# # filter to only contain wiki activities
+# w_s7 <- s7 %>% filter(verb_id == "http://id.tincanapi.com/verb/updated")
+# w_s8 <- s8 %>% filter(verb_id == "http://id.tincanapi.com/verb/updated")
