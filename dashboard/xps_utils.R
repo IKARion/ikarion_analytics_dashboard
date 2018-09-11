@@ -6,9 +6,10 @@ xpsEndpoint <- "http://cosa-app.fh-luebeck.de:50101"
 managementEndpoint <- "http://localhost:5000/management"
 buildCustomScript <- function(model, scriptTemplate) {
   
-  c(paste("course <-", model$model_metadata$course_id),
-    paste("pFrom <-", model$model_metadata$period_from),
-    paste("pTo <-", model$model_metadata$period_to)) %>%
+  c(paste("setwd('", getwd(), "')", sep=""),
+    paste("course <- '", model$model_metadata$course_id, "'", sep=""),
+    paste("pFrom <- '", model$model_metadata$period_from, "'", sep=""),
+    paste("pTo <- '", model$model_metadata$period_to), "'", sep="") %>%
     append(readLines(scriptTemplate)) 
 }
 
@@ -43,5 +44,20 @@ getScheduledTasks <- function() {
 
 sendModelToXPS <- function(model) {
   
-  POST(xpsEndpoint, add_headers(Authorization = "Token 285e19f20beded7d215102b49d5c09a0"), body = toJSON(model))
+  fail <- TRUE
+  
+  while (fail) {
+    
+    tryCatch({
+      
+      res <- POST(xpsEndpoint, add_headers(Authorization = "Token b5b41fac0361d157d9673ecb926af5ae"), 
+           body = toJSON(model), content_type_json())
+      fail <- FALSE
+    },
+    error = function(err) {
+      
+      print(err)
+    })
+  }
+  res
 }
