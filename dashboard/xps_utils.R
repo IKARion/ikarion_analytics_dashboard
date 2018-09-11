@@ -9,7 +9,7 @@ buildCustomScript <- function(model, scriptTemplate) {
   c(paste("setwd('", getwd(), "')", sep=""),
     paste("course <- '", model$model_metadata$course_id, "'", sep=""),
     paste("pFrom <- '", model$model_metadata$period_from, "'", sep=""),
-    paste("pTo <- '", model$model_metadata$period_to), "'", sep="") %>%
+    paste("pTo <- '", model$model_metadata$period_to, "'", sep="")) %>%
     append(readLines(scriptTemplate)) 
 }
 
