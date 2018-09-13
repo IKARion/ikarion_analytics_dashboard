@@ -42,13 +42,20 @@ getUserList <- function(courseId) {
   )
 }
 
-getGroupList <- function(courseId) {
+getGroupListForCourse <- function(courseId) {
 
   courseId <- replaceUrlChars(courseId)
   data_frame(
-    group=getData("user_model/groups_for_course", courseId) 
+    group=getData("group_model/groups_for_course", courseId) 
   )
+}
+
+getGroupListForTask <- function(taskId) {
   
+  taskId <- replaceUrlChars(taskId)
+  data_frame(
+    group=getData("group_model/groups_for_task", taskId) 
+  )
 }
 
 getActiveDaysUser <- function(userId, courseId) {
@@ -71,17 +78,23 @@ getActiveDaysAll <- function(courseId) {
 getGroupSequence <- function(courseId, groupId) {
   
   courseId <- replaceUrlChars(courseId)
-  getData("user_model/group_activities", courseId, groupId) %>% as_data_frame #%>% 
+  getData("group_model/group_activities", courseId, groupId) %>% as_data_frame #%>% 
+}
+
+getGroupTaskSequence <- function(courseId, groupId, taskId) {
+  courseId <- replaceUrlChars(courseId)
+  
+  getData("group_model/grouptask_activities", courseId, groupId, taskId)
 }
 
 getGroupRepositories <- function() {
-  data_frame(repo=getData("user_model/repositories"))
+  data_frame(repo=getData("group_model/repositories"))
 }
 
 getGroupSequenceGit <- function(repo) {
 
   repo <- replaceUrlChars(repo)
-  data <- getData("user_model/repo_activities",repo) %>% as_data_frame
+  data <- getData("group_model/repo_activities",repo) %>% as_data_frame
 }
 
 getGitSequencesAll <- function() {
@@ -97,9 +110,17 @@ getGitSequencesAll <- function() {
 getGroupSequencesAll <- function(courseId) {
   
   courseId <- replaceUrlChars(courseId)
-  getGroupList(courseId) %>%
+  getGroupListForCourse(courseId) %>%
     rowwise %>%
     do(getGroupSequence(courseId, .$group))
+}
+
+getGroupTaskSequencesAll <- function(courseId, taskId) {
+  
+  courseId <- replaceUrlChars(courseId)
+  getGroupListForTask(taskId) %>%
+    rowwise %>%
+    do(getGroupTaskSequence(courseId, .$group, taskId))
 }
 
 getGitCommitLatencies <- function(start, end) {
