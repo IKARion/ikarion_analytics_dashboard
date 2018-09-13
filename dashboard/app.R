@@ -29,7 +29,8 @@ ui <- dashboardPage(
   skin = "black",
   dashboardHeader(title = "IKARion Analytics"),
   dashboardSidebar(
-    selectInput("courses", "Course", generateCourseList()),  
+    selectInput("courses", "Course", generateCourseList()),
+    selectInput("group_tasks", "Group Task", list(none="none")),
     dateRangeInput("time_range", 
                    label = "Period", 
                    start = "2018-05-01",
@@ -82,13 +83,27 @@ ui <- dashboardPage(
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
   
+  # Update UI
+  observe({
+    taskList <- list(none="none")
+    tasks <- getTaskListForCourse(input$courses)
+
+    if (length(tasks) > 0) {
+      taskList[tasks$task_name] <- tasks$task_id  
+    }
+    
+    updateSelectInput(session, "group_tasks", choices = taskList)
+  })
+  
+  
   #################
   ## Group model ##
   #################
-  groupData <- callModule(groupLatency, "group_latencies", reactive(input$courses), reactive(input$time_range))
+  groupData <- callModule(groupLatency, "group_latencies", reactive(input$courses), reactive(input$time_range)) # reactive(input$group_tasks)
   groupSequences <- groupData$sequences
   groupLatencies <- groupData$latencies
   
+  # TODO: use task context.
   createGroupModel <- reactive({
     list(
       model_metadata=list(
