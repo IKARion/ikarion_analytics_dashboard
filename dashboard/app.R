@@ -83,11 +83,14 @@ ui <- dashboardPage(
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
   
+  getTaskList <- reactive({
+    getTaskListForCourse(input$courses)
+  })
   # Update UI
   observe({
     taskList <- list(none="none")
-    tasks <- getTaskListForCourse(input$courses)
-
+    tasks <- getTaskList()
+    print(tasks)
     if (length(tasks) > 0) {
       taskList[tasks$task_name] <- tasks$task_id  
     }
@@ -95,7 +98,7 @@ server <- function(input, output, session) {
     updateSelectInput(session, "group_tasks", choices = taskList)
   })
   
-  
+  selectedTask <- reactive({getTaskList() %>% filter(task_id == input$group_tasks)})
   #################
   ## Group model ##
   #################
@@ -110,9 +113,11 @@ server <- function(input, output, session) {
         course_id=input$courses, 
         period_from=input$time_range[1],
         period_to=input$time_range[2],
-        group_task="None"
+        group_task=selectedTask()
       ),
+      #get task
       latencies=groupLatencies(),
+      
       # add commit latencies to list
       #commitLatencies <- groupCommitLatencies(),
       #sequences=(groupSequences() %>% group_by(group_id) %>% do(sequence=select(., -group_id)))

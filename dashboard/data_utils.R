@@ -14,7 +14,8 @@ getData <- function(...) {
   
   paste(endpoint, ..., sep="/") %>%
     URLencode %>%
-    fromJSON %>% 
+    fromJSON %>%
+    #print %>%
     extract2("data")
 }
 
@@ -43,7 +44,7 @@ getUserList <- function(courseId) {
 }
 
 getTaskListForCourse <- function(courseId) {
-  
+
   courseId <- replaceUrlChars(courseId)
   getData("groups/group_tasks", courseId)
 }
