@@ -15,7 +15,7 @@ getData <- function(...) {
   paste(endpoint, ..., sep="/") %>%
     URLencode %>%
     fromJSON %>%
-    #print %>%
+    print %>%
     extract2("data")
 }
 
@@ -49,6 +49,11 @@ getTaskListForCourse <- function(courseId) {
   getData("groups/group_tasks", courseId)
 }
 
+getGroupsAndUsersForCourse <- function(courseId, task) {
+  courseId <- replaceUrlChars(courseId)
+  getData("groups/groups_for_task", courseId, task)
+}
+
 getGroupListForCourse <- function(courseId) {
 
   courseId <- replaceUrlChars(courseId)
@@ -58,10 +63,10 @@ getGroupListForCourse <- function(courseId) {
 }
 
 getGroupListForTask <- function(taskId) {
-  
+
   taskId <- replaceUrlChars(taskId)
   data_frame(
-    group=getData("groups/groups_for_task", taskId) 
+    group=getData("groups/groups_for_task", taskId)
   )
 }
 
@@ -172,8 +177,8 @@ getGroupLatencies2 <- function(groupSequences, start, end) {
       }) %>% mean %>% round(2)
       
       data_frame(latency=mLatency)
-    }) %>% 
-    mutate(group=paste("Group", group_id))
+    }) #%>% 
+    #mutate(group=paste("Group", group_id))
 }
 
 # calculate the latencies between activities in the bitbucket 

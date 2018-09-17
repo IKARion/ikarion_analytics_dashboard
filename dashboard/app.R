@@ -86,6 +86,12 @@ server <- function(input, output, session) {
   getTaskList <- reactive({
     getTaskListForCourse(input$courses)
   })
+  
+  # getGroupsAndUsers <- reactive ({
+  #   getGroupsAndUsersForCourse(input$course, selectedTask()$task_id)
+  # })
+  # groupsAndUsers <- reactive({getGroupsAndUsers()})
+  
   # Update UI
   observe({
     taskList <- list(none="none")
@@ -99,12 +105,20 @@ server <- function(input, output, session) {
   })
   
   selectedTask <- reactive({getTaskList() %>% filter(task_id == input$group_tasks)})
+  
+
+  
   #################
   ## Group model ##
   #################
   groupData <- callModule(groupLatency, "group_latencies", reactive(input$courses), reactive(input$time_range)) # reactive(input$group_tasks)
   groupSequences <- groupData$sequences
   groupLatencies <- groupData$latencies
+  
+  #dummygroups <- "\"groups\": [{\"group_id\": 25\",\"member_fullnames\": [\"user4 u4\",\"user3 u3\"]},{\"group_id\": \"26\",\"member_ids\": [\"user2 u2\",\"user1 u1\"]}]"
+  #dummygroups <- "[{group_id: 25,member_fullnames: [user4 u4,user3 u3]},{group_id: 26,member_fullnames: [user2 u2,user1 u1]}]"
+  dummygroups <- list(list(group_id = 25, member_ids = c("user3 u3", "user4 u4")),
+            list(group_id = 26, member_ids = c("user1 u1", "user2 u2")))
   
   # TODO: use task context.
   createGroupModel <- reactive({
@@ -113,17 +127,114 @@ server <- function(input, output, session) {
         course_id=input$courses, 
         period_from=input$time_range[1],
         period_to=input$time_range[2],
-        group_task=selectedTask()
+        task_context=list(selectedTask()),
+        groups = dummygroups
       ),
       #get task
-      latencies=groupLatencies(),
-      
+      average_latencies=groupLatencies(),
+      work_imbalance = calculateWorkImbalance(),
+
+      text_contributions_forum = (calculateForumWordcount(groupSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/replied"))),
+      text_contributions_wiki = (calculateWikiWordcount(groupSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/updated"))),
       # add commit latencies to list
       #commitLatencies <- groupCommitLatencies(),
       #sequences=(groupSequences() %>% group_by(group_id) %>% do(sequence=select(., -group_id)))
-      sequences=(groupSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated") %>%  group_by(group_id) %>% do(sequence=select(., -group_id)))
+      group_sequences=(groupSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated") %>%  group_by(group_id) %>% do(sequence=select(., -group_id)))
     )
   })
+  
+  
+  calculateWorkImbalance <- function() {
+    forum_data <- calculateForumWordcountGini(groupSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/replied"))
+    wiki_data <- calculateWikiWordcountGini(groupSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/updated"))
+    
+    merged_data <- merge(forum_data, wiki_data, by = c("user_id","group_id")) %>% 
+      group_by(user_id) %>% 
+      # forum contribution weight:  3 
+      # wiki contibution  weight:   1
+      mutate(overall_wordcount = sum(3*user_forum_wordcount, user_wiki_wordcount))
+    
+    merged_data2 <- merged_data %>% 
+      group_by(group_id) %>% 
+      summarise(gini_index = gini(overall_wordcount)*length(overall_wordcount)/(length(overall_wordcount)-1))
+    
+    # # calculate normalized gini coefficient for one group
+    # gini(user_contribution7$char_count_sum)*length(user_contribution7$char_count_sum)/(length(user_contribution7$char_count_sum)-1)
+    
+    
+    merged_data2
+                                          
+    
+  }
+  
+  
+  
+  
+  # calculate Forum wordcunt for every user in every group (for gini calculation)
+  calculateForumWordcountGini <- function(df) {
+    #browser()
+    data <- df %>% 
+      mutate(charcount = nchar(htmlTagClean(content))) %>% 
+      mutate(wordcount = wordcount(htmlTagClean(content))) %>% 
+      group_by(group_id) %>% 
+      group_by(user_id, add = T) %>% 
+      summarise(user_forum_wordcount = sum(wordcount))
+    
+    #browser()
+  }
+  
+  # TODO correct wordcount in wiki: account for text diff between revisions
+  # calculate Wiki wordcunt for every user in every group (for gini calculation)
+  calculateWikiWordcountGini <- function(df) {
+    #browser()
+    data <- df %>% 
+      mutate(charcount = nchar(htmlTagClean(content))) %>% 
+      mutate(wordcount = wordcount(htmlTagClean(content))) %>% 
+      group_by(group_id) %>% 
+      group_by(user_id, add = T) %>% 
+      summarise(user_wiki_wordcount = sum(wordcount))
+    
+    #browser()
+  }
+  
+  # calculate forum wordcount and format properly for group model
+  calculateForumWordcount <- function(df) {
+    #browser()
+    data <- df %>% 
+      mutate(charcount = nchar(htmlTagClean(content))) %>% 
+      mutate(wordcount = wordcount(htmlTagClean(content))) %>% 
+      group_by(group_id) %>% 
+      group_by(user_id, add = T) %>% 
+      summarise(user_wordcount = sum(wordcount))
+    
+    data <- data %>% 
+      group_by(group_id) %>% 
+      do(group_members=select(., -group_id))
+    
+    #browser()
+  }
+  # TODO correct wordcount in wiki: account for text diff between revisions
+  # calculate wiki wordcount and format properly for group model
+  calculateWikiWordcount <- function(df) {
+    #browser()
+    data <- df %>% 
+      mutate(charcount = nchar(htmlTagClean(content))) %>% 
+      mutate(wordcount = wordcount(htmlTagClean(content))) %>% 
+      group_by(group_id) %>% 
+      group_by(user_id, add = T) %>% 
+      summarise(user_wordcount = sum(wordcount))
+    
+    data <- data %>% 
+      group_by(group_id) %>% 
+      do(group_members=select(., -group_id))
+    
+    #browser()
+  }
+  
+  # clean html tags from forum posts
+  htmlTagClean <- function(htmlString) {
+    return(gsub("<.*?>", "", htmlString))
+  }
   
   # output$GroupRepos <- DT::renderDataTable(
   #   
@@ -133,7 +244,7 @@ server <- function(input, output, session) {
   output$downloadGM <- downloadHandler(
     filename = "group_model.json",
     content = function(file) {
-      createGroupModel() %>% toJSON() %>% writeLines(file)
+      createGroupModel() %>% toJSON(simplifyVector = T) %>% writeLines(file)
     }
   )
   
