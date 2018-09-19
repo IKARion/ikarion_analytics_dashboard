@@ -87,10 +87,10 @@ server <- function(input, output, session) {
     getTaskListForCourse(input$courses)
   })
   
-  # getGroupsAndUsers <- reactive ({
-  #   getGroupsAndUsersForCourse(input$course, selectedTask()$task_id)
-  # })
-  # groupsAndUsers <- reactive({getGroupsAndUsers()})
+  getGroupsAndUsers <- reactive ({
+    getGroupsAndUsersForCourse(input$courses, input$group_tasks)
+  })
+  
   
   # Update UI
   observe({
@@ -115,11 +115,6 @@ server <- function(input, output, session) {
   groupSequences <- groupData$sequences
   groupLatencies <- groupData$latencies
   
-  #dummygroups <- "\"groups\": [{\"group_id\": 25\",\"member_fullnames\": [\"user4 u4\",\"user3 u3\"]},{\"group_id\": \"26\",\"member_ids\": [\"user2 u2\",\"user1 u1\"]}]"
-  #dummygroups <- "[{group_id: 25,member_fullnames: [user4 u4,user3 u3]},{group_id: 26,member_fullnames: [user2 u2,user1 u1]}]"
-  dummygroups <- list(list(group_id = 25, member_ids = c("user3 u3", "user4 u4")),
-            list(group_id = 26, member_ids = c("user1 u1", "user2 u2")))
-  
   # TODO: use task context.
   createGroupModel <- reactive({
     list(
@@ -128,9 +123,8 @@ server <- function(input, output, session) {
         period_from=input$time_range[1],
         period_to=input$time_range[2],
         task_context=list(selectedTask()),
-        groups = dummygroups
+        groups = getGroupsAndUsers()
       ),
-      #get task
       average_latencies=groupLatencies(),
       work_imbalance = calculateWorkImbalance(),
 
@@ -139,7 +133,12 @@ server <- function(input, output, session) {
       # add commit latencies to list
       #commitLatencies <- groupCommitLatencies(),
       #sequences=(groupSequences() %>% group_by(group_id) %>% do(sequence=select(., -group_id)))
-      group_sequences=(groupSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated") %>%  group_by(group_id) %>% do(sequence=select(., -group_id)))
+      
+      # group sequence with content
+      #group_sequences=(groupSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated") %>%  group_by(group_id) %>% do(sequence=select(., -group_id)))
+      
+      # group sequence without content
+      group_sequences=(groupSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated") %>%  group_by(group_id) %>% do(sequence=select(., -c(group_id, content))))
     )
   })
   

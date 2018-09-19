@@ -14,8 +14,9 @@ getData <- function(...) {
   
   paste(endpoint, ..., sep="/") %>%
     URLencode %>%
+    print() %>% 
     fromJSON %>%
-    print %>%
+    #print %>%
     extract2("data")
 }
 
@@ -51,11 +52,18 @@ getTaskListForCourse <- function(courseId) {
 
 getGroupsAndUsersForCourse <- function(courseId, task) {
   courseId <- replaceUrlChars(courseId)
-  getData("groups/groups_for_task", courseId, task)
+  data <- getData("groups/groups_for_task", courseId, task) %>% 
+    do(data.frame(select(., c(id, group_members))))
+  
+  colnames(data)[which(names(data) == "id")] <- "group_id"
+  data
+  
 }
 
 getGroupListForCourse <- function(courseId) {
 
+  print("***groups***")
+  print(getData("groups/groups_for_course", courseId))
   courseId <- replaceUrlChars(courseId)
   data_frame(
     group=getData("groups/groups_for_course", courseId) 
