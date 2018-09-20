@@ -14,9 +14,8 @@ getData <- function(...) {
   
   paste(endpoint, ..., sep="/") %>%
     URLencode %>%
-    print() %>% 
+    #print() %>% 
     fromJSON %>%
-    #print %>%
     extract2("data")
 }
 
@@ -25,7 +24,6 @@ getData <- function(...) {
 ###
 
 courseName <- function(nameDf) {
-  print(nameDf)
   nameDf %>% 
   transmute(name=ifelse(is.na(en), de, en))
 }
@@ -62,8 +60,6 @@ getGroupsAndUsersForCourse <- function(courseId, task) {
 
 getGroupListForCourse <- function(courseId) {
 
-  print("***groups***")
-  print(getData("groups/groups_for_course", courseId))
   courseId <- replaceUrlChars(courseId)
   data_frame(
     group=getData("groups/groups_for_course", courseId) 
@@ -88,7 +84,6 @@ getActiveDaysUser <- function(userId, courseId) {
 }
 
 getActiveDaysAll <- function(courseId) {
-  print("get active days all")
   courseId <- replaceUrlChars(courseId)
   getUserList(courseId) %>%
     rowwise %>%
@@ -210,8 +205,7 @@ getCommitLatencies <- function(groupGitSequences, start, end) {
       
       data_frame(latency=mLatency)
     }) %>% 
-    mutate(group=paste("Group", group_id)) #%>% 
-    #print()
+    mutate(group=paste("Group", group_id))
   
 }
 

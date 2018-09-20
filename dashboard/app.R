@@ -96,7 +96,6 @@ server <- function(input, output, session) {
   observe({
     taskList <- list(none="none")
     tasks <- getTaskList()
-    print(tasks)
     if (length(tasks) > 0) {
       taskList[tasks$task_name] <- tasks$task_id  
     }
@@ -171,7 +170,6 @@ server <- function(input, output, session) {
   
   # calculate Forum wordcunt for every user in every group (for gini calculation)
   calculateForumWordcountGini <- function(df) {
-    #browser()
     data <- df %>% 
       mutate(charcount = nchar(htmlTagClean(content))) %>% 
       mutate(wordcount = wordcount(htmlTagClean(content))) %>% 
@@ -179,13 +177,11 @@ server <- function(input, output, session) {
       group_by(user_id, add = T) %>% 
       summarise(user_forum_wordcount = sum(wordcount))
     
-    #browser()
   }
   
   # TODO correct wordcount in wiki: account for text diff between revisions
   # calculate Wiki wordcunt for every user in every group (for gini calculation)
   calculateWikiWordcountGini <- function(df) {
-    #browser()
     data <- df %>% 
       mutate(charcount = nchar(htmlTagClean(content))) %>% 
       mutate(wordcount = wordcount(htmlTagClean(content))) %>% 
@@ -193,12 +189,10 @@ server <- function(input, output, session) {
       group_by(user_id, add = T) %>% 
       summarise(user_wiki_wordcount = sum(wordcount))
     
-    #browser()
   }
   
   # calculate forum wordcount and format properly for group model
   calculateForumWordcount <- function(df) {
-    #browser()
     data <- df %>% 
       mutate(charcount = nchar(htmlTagClean(content))) %>% 
       mutate(wordcount = wordcount(htmlTagClean(content))) %>% 
@@ -210,12 +204,10 @@ server <- function(input, output, session) {
       group_by(group_id) %>% 
       do(group_members=select(., -group_id))
     
-    #browser()
   }
   # TODO correct wordcount in wiki: account for text diff between revisions
   # calculate wiki wordcount and format properly for group model
   calculateWikiWordcount <- function(df) {
-    #browser()
     data <- df %>% 
       mutate(charcount = nchar(htmlTagClean(content))) %>% 
       mutate(wordcount = wordcount(htmlTagClean(content))) %>% 
@@ -227,7 +219,23 @@ server <- function(input, output, session) {
       group_by(group_id) %>% 
       do(group_members=select(., -group_id))
     
-    #browser()
+    
+    # # calculate text diff
+    # ##**
+    # View(df)
+    # 
+    # data2 <- df[1:2,]
+    # 
+    # data2[1,]$content
+    # data2[2,]$content
+    # 
+    # data3 <- data2[order(data2$timestamp),]
+    # 
+    # data3[1,]$content
+    # data3[2,]$content
+    # browser()
+    # ##**
+    
   }
   
   # clean html tags from forum posts
@@ -278,7 +286,7 @@ server <- function(input, output, session) {
   )
   
   observeEvent(input$UM_to_XPS, {
-    print("send user model")
+    #print("send user model")
     createUserModel() %>%  addScheduledTask(input$send_interval_UM, "script_templates/active_days_template.R", "user_model")
     showNotification("Model successfully send to XPS.")
     callModule(modelsToXps, "xps")
@@ -290,62 +298,3 @@ server <- function(input, output, session) {
 # Run the application 
 shinyApp(ui = ui, server = server)
 
-
-# ###
-# 
-# # clean html tags from forum posts
-# htmlTagClean <- function(htmlString) {
-#   return(gsub("<.*?>", "", htmlString))
-# }
-# 
-# # get group sequences for course "http://localhost/ikarion_moodle/course/view.php?id=6" for groups 17, 18
-# seq17 <- getGroupSequence("http://localhost/ikarion_moodle/course/view.php?id=6",17)
-# seq18 <- getGroupSequence("http://localhost/ikarion_moodle/course/view.php?id=6",18)
-# 
-# 
-# # filter to only countain forum and wiki activities
-# s7 <- seq17 %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated")
-# s8 <- seq18 %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated")
-# 
-# 
-# ## FORUM ACTIVITIES
-# 
-# # filter to only contain forum activities
-# f_s7 <- s7 %>% filter(verb_id == "http://id.tincanapi.com/verb/replied")
-# f_s8 <- s8 %>% filter(verb_id == "http://id.tincanapi.com/verb/replied")
-# 
-# # add new column with cleaned forum content
-# cleaned_df7 <- mutate(f_s7, cleaned_content = htmlTagClean(forum_content))
-# cleaned_df8 <- mutate(f_s8, cleaned_content = htmlTagClean(forum_content))
-# 
-# # try wordcount instead of character count
-# #cleaned_df7 <- mutate(cleaned_df7, word_count = wordcount(cleaned_content)) // wordcount function calculates sum of words for all fields in column; should only calculate it for one field
-# 
-# # add new column with character count for each activity
-# cleaned_df7 <- mutate(cleaned_df7, char_count = nchar(cleaned_content))
-# cleaned_df8 <- mutate(cleaned_df8, char_count = nchar(cleaned_content))
-# 
-# # calculate sum of characters for all forum posts for each user
-# user_contribution7 <- cleaned_df7 %>%
-#   group_by(user_id) %>%
-#   summarise(char_count_sum = sum(char_count))
-# 
-# user_contribution8 <- cleaned_df8 %>%
-#   group_by(user_id) %>%
-#   summarise(char_count_sum = sum(char_count))
-# 
-# library(reldist)
-# 
-# gini(user_contribution8$char_count_sum)
-# gini(user_contribution7$char_count_sum)
-# 
-# # calculate normalized gini coefficient for one group
-# gini(user_contribution7$char_count_sum)*length(user_contribution7$char_count_sum)/(length(user_contribution7$char_count_sum)-1)
-# gini(user_contribution8$char_count_sum)*length(user_contribution8$char_count_sum)/(length(user_contribution8$char_count_sum)-1)
-# 
-# 
-# ## WIKI CONTRIBUTIONS
-# 
-# # filter to only contain wiki activities
-# w_s7 <- s7 %>% filter(verb_id == "http://id.tincanapi.com/verb/updated")
-# w_s8 <- s8 %>% filter(verb_id == "http://id.tincanapi.com/verb/updated")
