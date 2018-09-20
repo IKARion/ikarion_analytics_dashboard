@@ -125,10 +125,15 @@ server <- function(input, output, session) {
         groups = getGroupsAndUsers()
       ),
       average_latencies=groupLatencies(),
+      
+      
       work_imbalance = calculateWorkImbalance(),
 
       text_contributions_forum = (calculateForumWordcount(groupSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/replied"))),
       text_contributions_wiki = (calculateWikiWordcount(groupSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/updated"))),
+      
+      
+      
       # add commit latencies to list
       #commitLatencies <- groupCommitLatencies(),
       #sequences=(groupSequences() %>% group_by(group_id) %>% do(sequence=select(., -group_id)))
@@ -141,7 +146,7 @@ server <- function(input, output, session) {
     )
   })
   
-  
+  # TODO insert non active users with wordcount = 0, currently only active users are accounted for
   calculateWorkImbalance <- function() {
     forum_data <- calculateForumWordcountGini(groupSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/replied"))
     wiki_data <- calculateWikiWordcountGini(groupSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/updated"))
@@ -163,79 +168,112 @@ server <- function(input, output, session) {
 
   # calculate Forum wordcunt for every user in every group (for gini calculation)
   calculateForumWordcountGini <- function(df) {
-    data <- df %>% 
-      mutate(charcount = nchar(htmlTagClean(content))) %>% 
-      mutate(wordcount = wordcount(htmlTagClean(content))) %>% 
-      group_by(group_id) %>% 
-      group_by(user_id, add = T) %>% 
-      summarise(user_forum_wordcount = sum(wordcount))
+    if(nrow(df) > 0) {
+      data <- df %>% 
+        mutate(charcount = nchar(htmlTagClean(content))) %>% 
+        mutate(wordcount = wordcount(htmlTagClean(content))) %>% 
+        group_by(group_id) %>% 
+        group_by(user_id, add = T) %>% 
+        summarise(user_forum_wordcount = sum(wordcount))
+    } else {
+      #print("no forum activity")
+    }
+    
     
   }
 
   
   # calculate forum wordcount and format properly for group model
   calculateForumWordcount <- function(df) {
-    data <- df %>% 
-      mutate(charcount = nchar(htmlTagClean(content))) %>% 
-      mutate(wordcount = wordcount(htmlTagClean(content))) %>% 
-      group_by(group_id) %>% 
-      group_by(user_id, add = T) %>% 
-      summarise(user_wordcount = sum(wordcount))
     
-    data <- data %>% 
-      group_by(group_id) %>% 
-      do(group_members=select(., -group_id))
+    #browser()
+    if(nrow(df) > 0) {
+      data <- df %>% mutate(charcount = nchar(htmlTagClean(content))) %>% 
+        mutate(wordcount = wordcount(htmlTagClean(content))) %>% 
+        group_by(group_id) %>% 
+        group_by(user_id, add = T) %>% 
+        summarise(user_wordcount = sum(wordcount))
+      
+      data <- data %>% 
+        group_by(group_id) %>% 
+        do(group_members=select(., -group_id))  
+    } else {
+      #print("no forum activity")
+    }
+    
     
   }
   
-  # calculate Wiki wordcunt for every user in every group (for gini calculation)
+  # calculate Wiki wordcount for every user in every group (for gini calculation)
   calculateWikiWordcountGini <- function(df) {
 
-    data <- df %>%
-      #mutate(charcount = nchar(htmlTagClean(content))) %>%
-      mutate(wordcount = wordcount(htmlTagClean(content))) %>%
-      group_by(group_id) %>%
-      #group_by(user_id, add = T) %>%
-      arrange(timestamp, .by_group = T) %>%
-      mutate(textchange = wordcount - lag(wordcount)) # calculate textchange as difference between current and last revision
-
-    firstRevisions <- is.na(data$textchange)
-    data$textchange[firstRevisions] <- data$wordcount[firstRevisions]
-
-    # calculate overall wordcount for each user
-    sum_wordcounts <- data %>%
-      group_by(group_id) %>%
-      group_by(user_id, add = T) %>%
-      summarise(user_wiki_wordcount = sum(textchange))
-
-    sum_wordcounts
+    if(nrow(df) > 0) {
+      data <- df %>%
+        #mutate(charcount = nchar(htmlTagClean(content))) %>%
+        mutate(wordcount = wordcount(htmlTagClean(content))) %>%
+        group_by(group_id) %>%
+        #group_by(user_id, add = T) %>%
+        arrange(timestamp, .by_group = T) %>%
+        mutate(textchange = wordcount - lag(wordcount)) # calculate textchange as difference between current and last revision
+      
+      # correct value for first revisions (since textchange for first posts are "NA")
+      firstRevisions <- is.na(data$textchange)
+      data$textchange[firstRevisions] <- data$wordcount[firstRevisions]
+      
+      # correct value for revisions that are shorter than the last on (change negative numbers to 0)
+      negativeWordcounts <- data$textchange < 0
+      data$textchange[negativeWordcounts] <- 0
+      
+      # calculate overall wordcount for each user
+      sum_wordcounts <- data %>%
+        group_by(group_id) %>%
+        group_by(user_id, add = T) %>%
+        summarise(user_wiki_wordcount = sum(textchange))
+      
+      sum_wordcounts
+      
+    } else {
+      #print("no wiki activity")
+    }
+    
     
   }
   
   # calculate wiki wordcount and format properly for group model
   calculateWikiWordcount <- function(df) {
-    data <- df %>% 
-      #mutate(charcount = nchar(htmlTagClean(content))) %>% 
-      mutate(wordcount = wordcount(htmlTagClean(content))) %>% 
-      # only group by "group_id" for "wordcount" calculation since revisions between different users in the group need to be considered for "textchange" calculation 
-      group_by(group_id) %>% 
-      arrange(timestamp, .by_group = T) %>%
-      mutate(textchange = wordcount - lag(wordcount)) # calculate textchange as difference between current and last revision
-    
-    # correct value for first revisions (since textchange for first posts are "NA")
-    firstRevisions <- is.na(data$textchange)
-    data$textchange[firstRevisions] <- data$wordcount[firstRevisions]
-    
-    # calculate overall wordcount for each user
-    sum_wordcounts <- data %>% 
-      group_by(group_id) %>% 
-      group_by(user_id, add = T) %>% 
-      summarise(user_wordcount = sum(textchange))
+    if (nrow(df) > 0) {
+      data <- df %>% 
+        #mutate(charcount = nchar(htmlTagClean(content))) %>% 
+        mutate(wordcount = wordcount(htmlTagClean(content))) %>% 
+        # only group by "group_id" for "wordcount" calculation since revisions between different users in the group need to be considered for "textchange" calculation 
+        group_by(group_id) %>% 
+        arrange(timestamp, .by_group = T) %>%
+        mutate(textchange = wordcount - lag(wordcount)) # calculate textchange as difference between current and last revision
       
-    # format according to model specification
-    formatted <- sum_wordcounts %>% 
-      group_by(group_id) %>% 
-      do(group_members=select(., -group_id))
+      # correct value for first revisions (since textchange for first posts are "NA")
+      firstRevisions <- is.na(data$textchange)
+      data$textchange[firstRevisions] <- data$wordcount[firstRevisions]
+      
+      # correct value for revisions that are shorter than the last on (change negative numbers to 0)
+      negativeWordcounts <- data$textchange < 0
+      data$textchange[negativeWordcounts] <- 0
+      
+      # calculate overall wordcount for each user
+      sum_wordcounts <- data %>% 
+        group_by(group_id) %>% 
+        group_by(user_id, add = T) %>% 
+        summarise(user_wordcount = sum(textchange))
+      
+      # format according to model specification
+      formatted <- sum_wordcounts %>% 
+        group_by(group_id) %>% 
+        do(group_members=select(., -group_id))
+      
+      #browser()
+    } else {
+      #print("no wiki activity")
+    }
+    
     
   }
   
