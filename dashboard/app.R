@@ -152,22 +152,15 @@ server <- function(input, output, session) {
       # wiki contibution  weight:   1
       mutate(overall_wordcount = sum(3*user_forum_wordcount, user_wiki_wordcount))
     
-    merged_data2 <- merged_data %>% 
+    gini_data <- merged_data %>% 
       group_by(group_id) %>% 
       summarise(gini_index = gini(overall_wordcount)*length(overall_wordcount)/(length(overall_wordcount)-1))
     
-    # # calculate normalized gini coefficient for one group
-    # gini(user_contribution7$char_count_sum)*length(user_contribution7$char_count_sum)/(length(user_contribution7$char_count_sum)-1)
-    
-    
-    merged_data2
+    gini_data
                                           
-    
   }
   
-  
-  
-  
+
   # calculate Forum wordcunt for every user in every group (for gini calculation)
   calculateForumWordcountGini <- function(df) {
     data <- df %>% 
@@ -178,18 +171,7 @@ server <- function(input, output, session) {
       summarise(user_forum_wordcount = sum(wordcount))
     
   }
-  
-  # TODO correct wordcount in wiki: account for text diff between revisions
-  # calculate Wiki wordcunt for every user in every group (for gini calculation)
-  calculateWikiWordcountGini <- function(df) {
-    data <- df %>% 
-      mutate(charcount = nchar(htmlTagClean(content))) %>% 
-      mutate(wordcount = wordcount(htmlTagClean(content))) %>% 
-      group_by(group_id) %>% 
-      group_by(user_id, add = T) %>% 
-      summarise(user_wiki_wordcount = sum(wordcount))
-    
-  }
+
   
   # calculate forum wordcount and format properly for group model
   calculateForumWordcount <- function(df) {
@@ -205,36 +187,55 @@ server <- function(input, output, session) {
       do(group_members=select(., -group_id))
     
   }
-  # TODO correct wordcount in wiki: account for text diff between revisions
+  
+  # calculate Wiki wordcunt for every user in every group (for gini calculation)
+  calculateWikiWordcountGini <- function(df) {
+
+    data <- df %>%
+      #mutate(charcount = nchar(htmlTagClean(content))) %>%
+      mutate(wordcount = wordcount(htmlTagClean(content))) %>%
+      group_by(group_id) %>%
+      #group_by(user_id, add = T) %>%
+      arrange(timestamp, .by_group = T) %>%
+      mutate(textchange = wordcount - lag(wordcount)) # calculate textchange as difference between current and last revision
+
+    firstRevisions <- is.na(data$textchange)
+    data$textchange[firstRevisions] <- data$wordcount[firstRevisions]
+
+    # calculate overall wordcount for each user
+    sum_wordcounts <- data %>%
+      group_by(group_id) %>%
+      group_by(user_id, add = T) %>%
+      summarise(user_wiki_wordcount = sum(textchange))
+
+    sum_wordcounts
+    
+  }
+  
   # calculate wiki wordcount and format properly for group model
   calculateWikiWordcount <- function(df) {
     data <- df %>% 
-      mutate(charcount = nchar(htmlTagClean(content))) %>% 
+      #mutate(charcount = nchar(htmlTagClean(content))) %>% 
       mutate(wordcount = wordcount(htmlTagClean(content))) %>% 
+      # only group by "group_id" for "wordcount" calculation since revisions between different users in the group need to be considered for "textchange" calculation 
+      group_by(group_id) %>% 
+      arrange(timestamp, .by_group = T) %>%
+      mutate(textchange = wordcount - lag(wordcount)) # calculate textchange as difference between current and last revision
+    
+    # correct value for first revisions (since textchange for first posts are "NA")
+    firstRevisions <- is.na(data$textchange)
+    data$textchange[firstRevisions] <- data$wordcount[firstRevisions]
+    
+    # calculate overall wordcount for each user
+    sum_wordcounts <- data %>% 
       group_by(group_id) %>% 
       group_by(user_id, add = T) %>% 
-      summarise(user_wordcount = sum(wordcount))
-    
-    data <- data %>% 
+      summarise(user_wordcount = sum(textchange))
+      
+    # format according to model specification
+    formatted <- sum_wordcounts %>% 
       group_by(group_id) %>% 
       do(group_members=select(., -group_id))
-    
-    
-    # # calculate text diff
-    # ##**
-    # View(df)
-    # 
-    # data2 <- df[1:2,]
-    # 
-    # data2[1,]$content
-    # data2[2,]$content
-    # 
-    # data3 <- data2[order(data2$timestamp),]
-    # 
-    # data3[1,]$content
-    # data3[2,]$content
-    # browser()
-    # ##**
     
   }
   
