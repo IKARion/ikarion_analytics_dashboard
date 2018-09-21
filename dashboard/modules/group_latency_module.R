@@ -18,20 +18,28 @@ groupLatencyUI <- function(id, label="Group Latencies") {
   )
 }
 
-groupLatency <- function(input, output, session, courses, timeRange) {
+groupLatency <- function(input, output, session, courses, group_tasks, timeRange) {
   
+  # old 
+  # use groupTaskSequence instead
   groupSequences <- reactive({
     
     df <- getGroupSequencesAll(courses())
-    getGroupSequencesAll(courses())
+    df
   })
+  
+  groupTaskSequences <- reactive({
+    df <- getGroupTaskSequencesAll(courses(), group_tasks())
+    df
+  })
+  
   
   groupLatencies <- reactive({
     trange <- timeRange() 
     start <- trange[1]# %>% as.POSIXlt %>% as.integer
     end <- trange[2] #%>% as.POSIXlt %>% as.integer
     
-    getGroupLatencies2(groupSequences(), start, end)
+    getGroupLatencies2(groupTaskSequences(), start, end)
   })
   
   output$latencyPlot <- renderPlot({
@@ -49,5 +57,5 @@ groupLatency <- function(input, output, session, courses, timeRange) {
       DT::datatable()
   )
   
-  list(sequences=groupSequences, latencies=groupLatencies)
+  list(sequences=groupSequences, latencies=groupLatencies, taskSequences=groupTaskSequences)
 }

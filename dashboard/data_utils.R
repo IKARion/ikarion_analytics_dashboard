@@ -64,14 +64,19 @@ getGroupListForCourse <- function(courseId) {
   data_frame(
     group=getData("groups/groups_for_course", courseId) 
   )
+  
 }
 
-getGroupListForTask <- function(taskId) {
+getGroupListForTask <- function(courseId, taskId) {
 
-  taskId <- replaceUrlChars(taskId)
-  data_frame(
-    group=getData("groups/groups_for_task", taskId)
-  )
+  courseId <- replaceUrlChars(courseId)
+  
+  groups <- getData("groups/groups_for_task", courseId, taskId)
+  
+  groups <- select(groups, id)
+  groups <- rename(groups, group = id)
+  
+  groups
 }
 
 getActiveDaysUser <- function(userId, courseId) {
@@ -97,8 +102,8 @@ getGroupSequence <- function(courseId, groupId) {
 }
 
 getGroupTaskSequence <- function(courseId, groupId, taskId) {
-  courseId <- replaceUrlChars(courseId)
   
+  courseId <- replaceUrlChars(courseId)
   getData("groups/grouptask_activities", courseId, groupId, taskId)
 }
 
@@ -122,8 +127,10 @@ getGitSequencesAll <- function() {
   
 }
 
+# old function: get all sequences for course
+# use getGroupTaskSequence instead
 getGroupSequencesAll <- function(courseId) {
-  
+
   courseId <- replaceUrlChars(courseId)
   getGroupListForCourse(courseId) %>%
     rowwise %>%
@@ -131,9 +138,9 @@ getGroupSequencesAll <- function(courseId) {
 }
 
 getGroupTaskSequencesAll <- function(courseId, taskId) {
-  
   courseId <- replaceUrlChars(courseId)
-  getGroupListForTask(taskId) %>%
+
+  getGroupListForTask(courseId, taskId) %>%
     rowwise %>%
     do(getGroupTaskSequence(courseId, .$group, taskId))
 }

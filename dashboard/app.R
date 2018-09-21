@@ -110,8 +110,9 @@ server <- function(input, output, session) {
   #################
   ## Group model ##
   #################
-  groupData <- callModule(groupLatency, "group_latencies", reactive(input$courses), reactive(input$time_range)) # reactive(input$group_tasks)
+  groupData <- callModule(groupLatency, "group_latencies", reactive(input$courses), reactive(input$group_tasks), reactive(input$time_range))
   groupSequences <- groupData$sequences
+  groupTaskSequences <- groupData$taskSequences
   groupLatencies <- groupData$latencies
   
   # TODO: use task context.
@@ -129,8 +130,8 @@ server <- function(input, output, session) {
       
       work_imbalance = calculateWorkImbalance(),
 
-      text_contributions_forum = (calculateForumWordcount(groupSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/replied"))),
-      text_contributions_wiki = (calculateWikiWordcount(groupSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/updated"))),
+      text_contributions_forum = (calculateForumWordcount(groupTaskSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/replied"))),
+      text_contributions_wiki = (calculateWikiWordcount(groupTaskSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/updated"))),
       
       
       
@@ -138,18 +139,23 @@ server <- function(input, output, session) {
       #commitLatencies <- groupCommitLatencies(),
       #sequences=(groupSequences() %>% group_by(group_id) %>% do(sequence=select(., -group_id)))
       
-      # group sequence with content
+      # complete group sequence with content
       #group_sequences=(groupSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated") %>%  group_by(group_id) %>% do(sequence=select(., -group_id)))
       
-      # group sequence without content
-      group_sequences=(groupSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated") %>%  group_by(group_id) %>% do(sequence=select(., -c(group_id, content))))
+      # complete group sequence without content
+      #group_sequences=( groupSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated") %>%  group_by(group_id) %>% do(sequence=select(., -c(group_id, content))))
+    
+      # group TASK sequences containing relavant activities
+      # USE THIS for current group model specification
+      group_sequences=( groupTaskSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated") %>%  group_by(group_id) %>% do(sequence=select(., -c(group_id, content))))
+      
     )
   })
   
   # TODO insert non active users with wordcount = 0, currently only active users are accounted for
   calculateWorkImbalance <- function() {
-    forum_data <- calculateForumWordcountGini(groupSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/replied"))
-    wiki_data <- calculateWikiWordcountGini(groupSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/updated"))
+    forum_data <- calculateForumWordcountGini(groupTaskSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/replied"))
+    wiki_data <- calculateWikiWordcountGini(groupTaskSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/updated"))
     
     merged_data <- merge(forum_data, wiki_data, by = c("user_id","group_id")) %>% 
       group_by(user_id) %>% 
@@ -335,5 +341,6 @@ server <- function(input, output, session) {
 }
 
 # Run the application 
-shinyApp(ui = ui, server = server)
+captureStackTraces(
+shinyApp(ui = ui, server = server))
 
