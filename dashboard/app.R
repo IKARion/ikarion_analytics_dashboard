@@ -157,11 +157,67 @@ server <- function(input, output, session) {
     forum_data <- calculateForumWordcountGini(groupTaskSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/replied"))
     wiki_data <- calculateWikiWordcountGini(groupTaskSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/updated"))
     
-    merged_data <- merge(forum_data, wiki_data, by = c("user_id","group_id")) %>% 
-      group_by(user_id) %>% 
-      # forum contribution weight:  3 
-      # wiki contibution  weight:   1
-      mutate(overall_wordcount = sum(3*user_forum_wordcount, user_wiki_wordcount))
+    # ##**
+    # 
+    # # get list of all users
+    # groupsAndUsers <- getGroupsAndUsers()
+    # # groupsAndUsers2 <- groupsAndUsers %>% 
+    # #   group_by(group_id) %>% 
+    # #   do(print(typeof(.$group_members)))
+    # 
+    # test <- unnest(groupsAndUsers)
+    # colnames(test)[which(names(test) == "fullname")] <- "user_id"
+    # 
+    # test2 <- test %>%  
+    #   select(c(group_id, user_id))
+    # 
+    # test3 <- test2 %>% 
+    #   mutate(user_forum_wordcount = 0) %>% 
+    #   mutate(user_wiki_wordcount = 0)
+    # 
+    # 
+    # #select(., -group_id)
+    # #colnames(data)[which(names(data) == "id")] <- "group_id"
+    # 
+    # merge <- NULL
+    # 
+    # if (is.null(wiki_data) & !is.null(forum_data)) {
+    #   merge <- forum_data %>% 
+    #     mutate(user_wiki_wordcount = 0)
+    #   
+    #   # add 0 wordcounts for all users for forum
+    #   
+    # } else if (!is.null(wiki_data) & is.null(forum_data)) {
+    #   merge <- wiki_data %>% 
+    #     mutate(user_forum_wordcount = 0)
+    #   
+    #   # add 0 wordcounts for all users for forum
+    #   
+    # } else if (!is.null(wiki_data) & !is.null(forum_data)) {
+    #   merge <- full_join(forum_data, wiki_data) %>% 
+    #     replace_na(list(user_forum_wordcount = 0, user_wiki_wordcount = 0)) 
+    # } else  {
+    #   print("no wiki or forum activity logged")
+    # }
+    # 
+    # test_merge <- full_join(x = merge, y = test3)
+    # 
+    # 
+    # 
+    # 
+    # test_merge2 <- left_join(test3, merge)
+    # test_merge4 <- left_join(test3, merge)
+    # test_merge3 <- merge(x = merge, y = test3, all.y = T)
+    # 
+    # 
+    # #merged_data <- merge(forum_data, wiki_data, by = c("user_id","group_id") ) %>% 
+    # merge %>% 
+    #   group_by(user_id) %>% 
+    #   # forum contribution weight:  3 
+    #   # wiki contibution  weight:   1
+    #   mutate(overall_wordcount = sum(3*user_forum_wordcount, user_wiki_wordcount))
+
+    
     
     gini_data <- merged_data %>% 
       group_by(group_id) %>% 
