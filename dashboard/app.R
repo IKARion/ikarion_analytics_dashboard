@@ -157,74 +157,65 @@ server <- function(input, output, session) {
     forum_data <- calculateForumWordcountGini(groupTaskSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/replied"))
     wiki_data <- calculateWikiWordcountGini(groupTaskSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/updated"))
     
-    # ##**
-    # 
-    # # get list of all users
-    # groupsAndUsers <- getGroupsAndUsers()
-    # # groupsAndUsers2 <- groupsAndUsers %>% 
-    # #   group_by(group_id) %>% 
-    # #   do(print(typeof(.$group_members)))
-    # 
-    # test <- unnest(groupsAndUsers)
-    # colnames(test)[which(names(test) == "fullname")] <- "user_id"
-    # 
-    # test2 <- test %>%  
-    #   select(c(group_id, user_id))
-    # 
-    # test3 <- test2 %>% 
-    #   mutate(user_forum_wordcount = 0) %>% 
-    #   mutate(user_wiki_wordcount = 0)
-    # 
-    # 
-    # #select(., -group_id)
-    # #colnames(data)[which(names(data) == "id")] <- "group_id"
-    # 
-    # merge <- NULL
-    # 
-    # if (is.null(wiki_data) & !is.null(forum_data)) {
-    #   merge <- forum_data %>% 
-    #     mutate(user_wiki_wordcount = 0)
-    #   
-    #   # add 0 wordcounts for all users for forum
-    #   
-    # } else if (!is.null(wiki_data) & is.null(forum_data)) {
-    #   merge <- wiki_data %>% 
-    #     mutate(user_forum_wordcount = 0)
-    #   
-    #   # add 0 wordcounts for all users for forum
-    #   
-    # } else if (!is.null(wiki_data) & !is.null(forum_data)) {
-    #   merge <- full_join(forum_data, wiki_data) %>% 
-    #     replace_na(list(user_forum_wordcount = 0, user_wiki_wordcount = 0)) 
-    # } else  {
-    #   print("no wiki or forum activity logged")
-    # }
-    # 
-    # test_merge <- full_join(x = merge, y = test3)
-    # 
-    # 
-    # 
-    # 
-    # test_merge2 <- left_join(test3, merge)
-    # test_merge4 <- left_join(test3, merge)
-    # test_merge3 <- merge(x = merge, y = test3, all.y = T)
-    # 
-    # 
-    # #merged_data <- merge(forum_data, wiki_data, by = c("user_id","group_id") ) %>% 
-    # merge %>% 
-    #   group_by(user_id) %>% 
-    #   # forum contribution weight:  3 
-    #   # wiki contibution  weight:   1
-    #   mutate(overall_wordcount = sum(3*user_forum_wordcount, user_wiki_wordcount))
 
+    # get list of all users
+    groupsAndUsers <- getGroupsAndUsers()
+
+    # see which users do not appear in the data and add forum and wiki wordcount of 0 so that all users that are assigned to a group 
+    # are accounted for in the gini calculation
+    
+    # generate table for all groups and users with:
+      # user_forum_wordcount = 0 and user_wiki_wordcount = 0
+    all_users <- unnest(groupsAndUsers)
+    colnames(all_users)[which(names(all_users) == "fullname")] <- "user_id"
+
+    all_users <- all_users %>%
+      select(c(group_id, user_id)) %>% 
+      mutate(user_forum_wordcount = 0) %>%
+      mutate(user_wiki_wordcount = 0)
+
+    # dataframe with all users (active + inactive) 
+    merge <- NULL
+
+    # only activity in forum
+    if (is.null(wiki_data) & !is.null(forum_data)) {
+      merge <- forum_data %>%
+        mutate(user_wiki_wordcount = 0)
+
+    # only activity in wiki
+    } else if (!is.null(wiki_data) & is.null(forum_data)) {
+      merge <- wiki_data %>%
+        mutate(user_forum_wordcount = 0)
+
+    # activity in forum and wiki
+    } else if (!is.null(wiki_data) & !is.null(forum_data)) {
+      merge <- full_join(forum_data, wiki_data) %>%
+        replace_na(list(user_forum_wordcount = 0, user_wiki_wordcount = 0))
+    } else  {
+      
+      # no activity at all
+      # only possible if groups are logged on group creation without user activity
+      print("no wiki or forum activity logged")
+    }
     
     
-    gini_data <- merged_data %>% 
+    # add all inactive users to the data
+    
+    # missing users
+    missing <- anti_join(all_users, merge, by = c("group_id", "user_id"))
+
+    complete_data <- full_join(missing, merge) %>% 
+      group_by(user_id) %>%
+      # forum contribution weight:  3
+      # wiki contibution  weight:   1
+      mutate(overall_wordcount = sum(3*user_forum_wordcount, user_wiki_wordcount))
+    
+    
+    gini_data <- complete_data %>% 
       group_by(group_id) %>% 
       summarise(gini_index = gini(overall_wordcount)*length(overall_wordcount)/(length(overall_wordcount)-1))
     
     gini_data
-                                          
   }
   
 
@@ -248,7 +239,23 @@ server <- function(input, output, session) {
   # calculate forum wordcount and format properly for group model
   calculateForumWordcount <- function(df) {
     
-    #browser()
+    final_data <- NULL
+    
+    # get list of all users
+    groupsAndUsers <- getGroupsAndUsers()
+    
+    # see which users do not appear in the data and add forum and wiki wordcount of 0 so that all users that are assigned to a group 
+    # are accounted for in the gini calculation
+    
+    # generate table for all groups and users with:
+    # user_forum_wordcount = 0 and user_wiki_wordcount = 0
+    all_users <- unnest(groupsAndUsers)
+    colnames(all_users)[which(names(all_users) == "fullname")] <- "user_id"
+    
+    all_users <- all_users %>%
+      select(c(group_id, user_id)) %>% 
+      mutate(user_wordcount = 0)
+    
     if(nrow(df) > 0) {
       data <- df %>% mutate(charcount = nchar(htmlTagClean(content))) %>% 
         mutate(wordcount = wordcount(htmlTagClean(content))) %>% 
@@ -256,14 +263,23 @@ server <- function(input, output, session) {
         group_by(user_id, add = T) %>% 
         summarise(user_wordcount = sum(wordcount))
       
-      data <- data %>% 
+      missing <- anti_join(all_users, data, by = c("group_id", "user_id"))
+      
+      complete_data <- full_join(missing, data)
+   
+      final_data <- complete_data %>% 
         group_by(group_id) %>% 
         do(group_members=select(., -group_id))  
+      
     } else {
-      #print("no forum activity")
+      
+      # data with all inactive users
+      final_data <- all_users %>% 
+        group_by(group_id) %>% 
+        do(group_members=select(., -group_id)) 
     }
     
-    
+    final_data
   }
   
   # calculate Wiki wordcount for every user in every group (for gini calculation)
@@ -303,6 +319,24 @@ server <- function(input, output, session) {
   
   # calculate wiki wordcount and format properly for group model
   calculateWikiWordcount <- function(df) {
+    
+    final_data <- NULL
+    
+    # get list of all users
+    groupsAndUsers <- getGroupsAndUsers()
+    
+    # see which users do not appear in the data and add wiki wordcount of 0 so that all users that are assigned to a group 
+    # are accounted for in the calculation
+    
+    # generate table for all groups and users with:
+    # user_forum_wordcount = 0 and user_wiki_wordcount = 0
+    all_users <- unnest(groupsAndUsers)
+    colnames(all_users)[which(names(all_users) == "fullname")] <- "user_id"
+    
+    all_users <- all_users %>%
+      select(c(group_id, user_id)) %>% 
+      mutate(user_wordcount = 0)
+    
     if (nrow(df) > 0) {
       data <- df %>% 
         #mutate(charcount = nchar(htmlTagClean(content))) %>% 
@@ -326,16 +360,24 @@ server <- function(input, output, session) {
         group_by(user_id, add = T) %>% 
         summarise(user_wordcount = sum(textchange))
       
+      missing <- anti_join(all_users, sum_wordcounts, by = c("group_id", "user_id"))
+      
+      complete_data <- full_join(missing, sum_wordcounts)
+      
       # format according to model specification
-      formatted <- sum_wordcounts %>% 
+      final_data <- complete_data %>% 
         group_by(group_id) %>% 
         do(group_members=select(., -group_id))
       
-      #browser()
     } else {
-      #print("no wiki activity")
+      
+      # data with all inactive users
+      final_data <- all_users %>% 
+        group_by(group_id) %>% 
+        do(group_members=select(., -group_id))
     }
     
+    final_data
     
   }
   
