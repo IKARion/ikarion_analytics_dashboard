@@ -2,8 +2,7 @@ require(jsonlite)
 require(dplyr)
 require(magrittr)
 
-#endpoint <- "http://descartes.inf.uni-due.de:5000"
-endpoint <- "http://localhost:5000" 
+endpoint <- appConfig$dataEndpoint
 
 replaceUrlChars <- function(string) {
   string <- gsub("/", "$slash$", string)
@@ -14,7 +13,10 @@ getData <- function(...) {
   
   paste(endpoint, ..., sep="/") %>%
     URLencode %>%
+<<<<<<< HEAD
     print() %>% 
+=======
+>>>>>>> 94498164eebf313bfce6b8dbc0d04570ea5d97f4
     fromJSON %>%
     extract2("data")
 }
@@ -135,7 +137,9 @@ getGroupSequencesAll <- function(courseId) {
   courseId <- replaceUrlChars(courseId)
   getGroupListForCourse(courseId) %>%
     rowwise %>%
-    do(getGroupSequence(courseId, .$group))
+    do({print(.$group)
+      getGroupSequence(courseId, .$group)}
+      )
 }
 
 getGroupTaskSequencesAll <- function(courseId, taskId) {
