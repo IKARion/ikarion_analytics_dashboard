@@ -39,7 +39,9 @@ groupLatency <- function(input, output, session, courses, group_tasks, timeRange
     start <- trange[1]# %>% as.POSIXlt %>% as.integer
     end <- trange[2] #%>% as.POSIXlt %>% as.integer
     
-    getGroupLatencies2(groupTaskSequences(), start, end)
+    data <- getGroupLatencies2(groupTaskSequences(), start, end)
+    
+    
   })
   
   output$latencyPlot <- renderPlot({

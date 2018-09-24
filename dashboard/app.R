@@ -91,6 +91,22 @@ server <- function(input, output, session) {
     getGroupsAndUsersForCourse(input$courses, input$group_tasks)
   })
   
+  getAllGroupLatencies <- reactive({
+    # add latency = 0 for groups without forum activity
+    latencies <- groupLatencies()
+    allGroups <- getGroupsAndUsers() %>% 
+      select(c("group_id")) %>% 
+      mutate(latency = 0)
+    
+    missing <- anti_join(allGroups, latencies, by = c("group_id"))
+    complete_data <- full_join(missing, latencies)
+    
+    complete_data
+    
+    #browser()
+    
+  })
+  
   
   # Update UI
   observe({
@@ -125,7 +141,12 @@ server <- function(input, output, session) {
         task_context=list(selectedTask()),
         groups = getGroupsAndUsers()
       ),
-      average_latencies=groupLatencies(),
+      
+      # latency list that only contains groups that were active in the forum
+      #average_latencies=groupLatencies(),
+      
+      # latency list with all groups, forum inative groups have a latency of 0
+      average_latencies=getAllGroupLatencies(),
       
       
       work_imbalance = calculateWorkImbalance(),

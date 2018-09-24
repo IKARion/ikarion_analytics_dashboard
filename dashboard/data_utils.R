@@ -174,7 +174,7 @@ getGroupLatencies2 <- function(groupSequences, start, end) {
   start %<>% as.POSIXct %>% as.integer
   end %<>% as.POSIXct %>% as.integer
 
-  groupSequences %>%
+  data <- groupSequences %>%
     group_by(group_id) %>%
     filter((verb_id == "http://id.tincanapi.com/verb/replied") & 
              (timestamp >= start) & (timestamp <= end)) %>%
@@ -189,6 +189,10 @@ getGroupLatencies2 <- function(groupSequences, start, end) {
       data_frame(latency=mLatency)
     }) #%>% 
     #mutate(group=paste("Group", group_id))
+  
+  
+  data
+  
 }
 
 # calculate the latencies between activities in the bitbucket 
