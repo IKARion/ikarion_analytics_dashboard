@@ -18,12 +18,18 @@ groupLatencyUI <- function(id, label="Group Latencies") {
   )
 }
 
-groupLatency <- function(input, output, session, courses, timeRange) {
+groupLatency <- function(input, output, session, courses, timeRange, task="none") {
   
   groupSequences <- reactive({
     
-    df <- getGroupSequencesAll(courses())
-    getGroupSequencesAll(courses())
+    if (task == "none") {
+    
+      df <- getGroupSequencesAll(courses())
+      getGroupSequencesAll(courses())  
+    } else {
+      
+      getGroupTaskSequencesAll(courses(), task())
+    }
   })
   
   groupLatencies <- reactive({

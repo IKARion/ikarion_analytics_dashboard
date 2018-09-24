@@ -2,8 +2,7 @@ require(jsonlite)
 require(dplyr)
 require(magrittr)
 
-#endpoint <- "http://descartes.inf.uni-due.de:5000"
-endpoint <- "http://localhost:5000" 
+endpoint <- appConfig$dataEndpoint
 
 replaceUrlChars <- function(string) {
   string <- gsub("/", "$slash$", string)
@@ -118,7 +117,9 @@ getGroupSequencesAll <- function(courseId) {
   courseId <- replaceUrlChars(courseId)
   getGroupListForCourse(courseId) %>%
     rowwise %>%
-    do(getGroupSequence(courseId, .$group))
+    do({print(.$group)
+      getGroupSequence(courseId, .$group)}
+      )
 }
 
 getGroupTaskSequencesAll <- function(courseId, taskId) {

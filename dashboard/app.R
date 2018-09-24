@@ -8,6 +8,7 @@
 #
 
 source("setup.R")
+source("config.R")
 source("data_utils.R")
 source("xps_utils.R")
 
@@ -99,7 +100,7 @@ server <- function(input, output, session) {
   #################
   ## Group model ##
   #################
-  groupData <- callModule(groupLatency, "group_latencies", reactive(input$courses), reactive(input$time_range)) # reactive(input$group_tasks)
+  groupData <- callModule(groupLatency, "group_latencies", reactive(input$courses), reactive(input$time_range), reactive(input$group_tasks)) 
   groupSequences <- groupData$sequences
   groupLatencies <- groupData$latencies
   

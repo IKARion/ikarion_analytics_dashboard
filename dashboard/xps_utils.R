@@ -1,9 +1,9 @@
 require(httr)
 require(digest)
 require(jsonlite)
-xpsEndpoint <- "http://cosa-app.fh-luebeck.de:50101"
-#managementEndpoint <- "http://descartes.inf.uni-due.de:5000/management"
-managementEndpoint <- "http://localhost:5000/management"
+xpsEndpoint <- appConfig$xpsEndpoint
+managementEndpoint <- appConfig$managementEndpoint
+
 buildCustomScript <- function(model, scriptTemplate) {
   
   c(paste("setwd('", getwd(), "')", sep=""),
