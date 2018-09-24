@@ -51,8 +51,9 @@ sendModelToXPS <- function(model) {
     tryCatch({
       
       res <- POST(xpsEndpoint, add_headers(Authorization = "Token b5b41fac0361d157d9673ecb926af5ae"), 
-           body = toJSON(model), content_type_json())
+           body = toJSON(model, simplifyVector = T), content_type_json())
       fail <- FALSE
+      print("Model Sent")
     },
     error = function(err) {
       

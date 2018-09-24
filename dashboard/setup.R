@@ -18,6 +18,11 @@ if (!require(dplyr)) {
   require(dplyr)
 }
 
+if (!require(tidyr)) {
+  install.packages("tidyr")
+  require(tidyr)
+}
+
 if (!require(magrittr)) {
   install.packages("magrittr")
   require(magrittr)

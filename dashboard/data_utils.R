@@ -13,7 +13,8 @@ getData <- function(...) {
   
   paste(endpoint, ..., sep="/") %>%
     URLencode %>%
-    fromJSON %>% 
+    #print() %>% 
+    fromJSON %>%
     extract2("data")
 }
 
@@ -22,7 +23,6 @@ getData <- function(...) {
 ###
 
 courseName <- function(nameDf) {
-  print(nameDf)
   nameDf %>% 
   transmute(name=ifelse(is.na(en), de, en))
 }
@@ -42,9 +42,19 @@ getUserList <- function(courseId) {
 }
 
 getTaskListForCourse <- function(courseId) {
-  
+
   courseId <- replaceUrlChars(courseId)
   getData("groups/group_tasks", courseId)
+}
+
+getGroupsAndUsersForCourse <- function(courseId, task) {
+  courseId <- replaceUrlChars(courseId)
+  data <- getData("groups/groups_for_task", courseId, task) %>% 
+    do(data.frame(select(., c(id, group_members))))
+  
+  colnames(data)[which(names(data) == "id")] <- "group_id"
+  data
+  
 }
 
 getGroupListForCourse <- function(courseId) {
@@ -53,14 +63,19 @@ getGroupListForCourse <- function(courseId) {
   data_frame(
     group=getData("groups/groups_for_course", courseId) 
   )
+  
 }
 
-getGroupListForTask <- function(taskId) {
+getGroupListForTask <- function(courseId, taskId) {
+
+  courseId <- replaceUrlChars(courseId)
   
-  taskId <- replaceUrlChars(taskId)
-  data_frame(
-    group=getData("groups/groups_for_task", taskId) 
-  )
+  groups <- getData("groups/groups_for_task", courseId, taskId)
+  
+  groups <- select(groups, id)
+  groups <- rename(groups, group = id)
+  
+  groups
 }
 
 getActiveDaysUser <- function(userId, courseId) {
@@ -73,7 +88,6 @@ getActiveDaysUser <- function(userId, courseId) {
 }
 
 getActiveDaysAll <- function(courseId) {
-  print("get active days all")
   courseId <- replaceUrlChars(courseId)
   getUserList(courseId) %>%
     rowwise %>%
@@ -87,8 +101,8 @@ getGroupSequence <- function(courseId, groupId) {
 }
 
 getGroupTaskSequence <- function(courseId, groupId, taskId) {
-  courseId <- replaceUrlChars(courseId)
   
+  courseId <- replaceUrlChars(courseId)
   getData("groups/grouptask_activities", courseId, groupId, taskId)
 }
 
@@ -112,8 +126,10 @@ getGitSequencesAll <- function() {
   
 }
 
+# old function: get all sequences for course
+# use getGroupTaskSequence instead
 getGroupSequencesAll <- function(courseId) {
-  
+
   courseId <- replaceUrlChars(courseId)
   getGroupListForCourse(courseId) %>%
     rowwise %>%
@@ -123,9 +139,9 @@ getGroupSequencesAll <- function(courseId) {
 }
 
 getGroupTaskSequencesAll <- function(courseId, taskId) {
-  
   courseId <- replaceUrlChars(courseId)
-  getGroupListForTask(taskId) %>%
+
+  getGroupListForTask(courseId, taskId) %>%
     rowwise %>%
     do(getGroupTaskSequence(courseId, .$group, taskId))
 }
@@ -159,7 +175,7 @@ getGroupLatencies2 <- function(groupSequences, start, end) {
   start %<>% as.POSIXct %>% as.integer
   end %<>% as.POSIXct %>% as.integer
 
-  groupSequences %>%
+  data <- groupSequences %>%
     group_by(group_id) %>%
     filter((verb_id == "http://id.tincanapi.com/verb/replied") & 
              (timestamp >= start) & (timestamp <= end)) %>%
@@ -172,8 +188,12 @@ getGroupLatencies2 <- function(groupSequences, start, end) {
       }) %>% mean %>% round(2)
       
       data_frame(latency=mLatency)
-    }) %>% 
-    mutate(group=paste("Group", group_id))
+    }) #%>% 
+    #mutate(group=paste("Group", group_id))
+  
+  
+  data
+  
 }
 
 # calculate the latencies between activities in the bitbucket 
@@ -197,8 +217,7 @@ getCommitLatencies <- function(groupGitSequences, start, end) {
       
       data_frame(latency=mLatency)
     }) %>% 
-    mutate(group=paste("Group", group_id)) #%>% 
-    #print()
+    mutate(group=paste("Group", group_id))
   
 }
 
