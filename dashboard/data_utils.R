@@ -13,10 +13,6 @@ getData <- function(...) {
   
   paste(endpoint, ..., sep="/") %>%
     URLencode %>%
-<<<<<<< HEAD
-    print() %>% 
-=======
->>>>>>> 94498164eebf313bfce6b8dbc0d04570ea5d97f4
     fromJSON %>%
     extract2("data")
 }
