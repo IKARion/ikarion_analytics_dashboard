@@ -1,6 +1,7 @@
 require(jsonlite)
 require(dplyr)
 require(magrittr)
+require(lubridate)
 
 endpoint <- appConfig$dataEndpoint
 
