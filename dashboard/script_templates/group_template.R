@@ -1,3 +1,4 @@
+source("config.R")
 source("xps_utils.R")
 source("data_utils.R")
 
