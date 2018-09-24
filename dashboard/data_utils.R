@@ -14,7 +14,7 @@ getData <- function(...) {
   
   paste(endpoint, ..., sep="/") %>%
     URLencode %>%
-    #print() %>% 
+    print() %>% 
     fromJSON %>%
     extract2("data")
 }
@@ -84,7 +84,8 @@ getActiveDaysUser <- function(userId, courseId) {
   courseId <- replaceUrlChars(courseId)
   
   data_frame(
-    user=substring(digest::sha1(userId),1,8), activeDay=getData("user_model/active_days", userId, courseId)
+    #user=substring(digest::sha1(userId),1,8), activeDay=getData("user_model/active_days", userId, courseId)
+    user=userId, activeDay=getData("user_model/active_days", userId, courseId)
   )
 }
 
@@ -92,7 +93,7 @@ getActiveDaysAll <- function(courseId) {
   courseId <- replaceUrlChars(courseId)
   getUserList(courseId) %>%
     rowwise %>%
-    do(getActiveDaysUser(.$user, courseId)) %>% ungroup
+    do(getActiveDaysUser(replaceUrlChars(.$user), courseId)) %>% ungroup
 }
 
 getGroupSequence <- function(courseId, groupId) {
