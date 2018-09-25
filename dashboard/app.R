@@ -7,6 +7,7 @@
 #    http://shiny.rstudio.com/
 #
 
+source("config.R")
 source("setup.R")
 source("data_utils.R")
 source("xps_utils.R")
@@ -126,7 +127,9 @@ server <- function(input, output, session) {
   #################
   ## Group model ##
   #################
+
   groupData <- callModule(groupLatency, "group_latencies", reactive(input$courses), reactive(input$group_tasks), reactive(input$time_range))
+
   groupSequences <- groupData$sequences
   groupTaskSequences <- groupData$taskSequences
   groupLatencies <- groupData$latencies
