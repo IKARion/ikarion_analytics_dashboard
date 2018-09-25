@@ -313,7 +313,7 @@ sendModelToXPS <- function(model) {
 
   fail <- TRUE
   
-  print(toJSON(model))
+  #print(toJSON(model))
   
   while (fail) {
     
