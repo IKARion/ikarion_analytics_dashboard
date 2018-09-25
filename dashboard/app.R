@@ -11,6 +11,7 @@ source("config.R")
 source("setup.R")
 source("data_utils.R")
 source("xps_utils.R")
+source("config.R")
 
 # Load modules
 source("modules/user_active_days_module.R")
