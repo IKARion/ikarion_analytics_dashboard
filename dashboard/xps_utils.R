@@ -187,8 +187,6 @@ calculateForumWordcountFun <- function(df, groupsAndUsers) {
 
 calculateWikiWordcountFun <- function(df, groupsAndUsers) {
   
-  print("*1")
-  #browser()
   final_data <- NULL
   
   # get list of all users
@@ -263,8 +261,6 @@ calculateWikiWordcountFun <- function(df, groupsAndUsers) {
       do(group_members=select(., -group_id))
   }
   final_data
-  print("done")
-  #browser()
   
 }
 
