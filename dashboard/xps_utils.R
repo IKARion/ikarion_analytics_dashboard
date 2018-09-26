@@ -23,17 +23,24 @@ calculateWorkImbalanceFun <- function(groupTaskSequences, groupsAndUsers) {
   forum_data <- calculateForumWordcountGini(groupTaskSequences %>% filter(verb_id == "http://id.tincanapi.com/verb/replied"))
   wiki_data <- calculateWikiWordcountGini(groupTaskSequences %>% filter(verb_id == "http://id.tincanapi.com/verb/updated"))
   
-  
+  #browser()
   # get list of all users
-  groupsAndUsers <- groupsAndUsers
+  #groupsAndUsers <- groupsAndUsers
   
   # see which users do not appear in the data and add forum and wiki wordcount of 0 so that all users that are assigned to a group 
   # are accounted for in the gini calculation
   
   # generate table for all groups and users with:
   # user_forum_wordcount = 0 and user_wiki_wordcount = 0
+  # all_users <- unnest(groupsAndUsers)
+  # colnames(all_users)[which(names(all_users) == "fullname")] <- "user_id"
+  
   all_users <- unnest(groupsAndUsers)
-  colnames(all_users)[which(names(all_users) == "fullname")] <- "user_id"
+  if ("name" %in% names(all_users)) {
+    colnames(all_users)[which(names(all_users) == "name")] <- "user_id"
+  } else {
+    colnames(all_users)[which(names(all_users) == "fullname")] <- "user_id"
+  }
   
   all_users <- all_users %>%
     select(c(group_id, user_id)) %>% 
@@ -132,18 +139,26 @@ calculateWikiWordcountGini <- function(df) {
 }
 
 calculateForumWordcountFun <- function(df, groupsAndUsers) {
+  #browser()
   final_data <- NULL
   
   # get list of all users
-  groupsAndUsers <- groupsAndUsers
+  #groupsAndUsers <- groupsAndUsers
   
   # see which users do not appear in the data and add forum and wiki wordcount of 0 so that all users that are assigned to a group 
   # are accounted for in the gini calculation
   
   # generate table for all groups and users with:
   # user_forum_wordcount = 0 and user_wiki_wordcount = 0
+  # all_users <- unnest(groupsAndUsers)
+  # colnames(all_users)[which(names(all_users) == "fullname")] <- "user_id"
+  
   all_users <- unnest(groupsAndUsers)
-  colnames(all_users)[which(names(all_users) == "fullname")] <- "user_id"
+  if ("name" %in% names(all_users)) {
+    colnames(all_users)[which(names(all_users) == "name")] <- "user_id"
+  } else {
+    colnames(all_users)[which(names(all_users) == "fullname")] <- "user_id"
+  }
   
   all_users <- all_users %>%
     select(c(group_id, user_id)) %>% 
@@ -176,18 +191,37 @@ calculateForumWordcountFun <- function(df, groupsAndUsers) {
 
 calculateWikiWordcountFun <- function(df, groupsAndUsers) {
   
+  print("*1")
+  #browser()
   final_data <- NULL
   
   # get list of all users
-  groupsAndUsers <- groupsAndUsers
+  #groupsAndUsers <- groupsAndUsers
   
   # see which users do not appear in the data and add wiki wordcount of 0 so that all users that are assigned to a group 
   # are accounted for in the calculation
   
   # generate table for all groups and users with:
   # user_forum_wordcount = 0 and user_wiki_wordcount = 0
+  
+  # all_users <- unnest(groupsAndUsers)
+  # if ("name" %in% names(all_users)) {
+  #   
+  #   all_users %<>% rename(name="user_id")
+  # } else {
+  #   
+  #   all_users %<>% rename(fullname="user_id")
+  # }
+  
   all_users <- unnest(groupsAndUsers)
-  colnames(all_users)[which(names(all_users) == "fullname")] <- "user_id"
+  if ("name" %in% names(all_users)) {
+    colnames(all_users)[which(names(all_users) == "name")] <- "user_id"
+  } else {
+    colnames(all_users)[which(names(all_users) == "fullname")] <- "user_id"
+  }
+  
+  #browser()
+  #colnames(all_users)[which(names(all_users) == "fullname")] <- "user_id"
   
   all_users <- all_users %>%
     select(c(group_id, user_id)) %>% 
@@ -233,9 +267,37 @@ calculateWikiWordcountFun <- function(df, groupsAndUsers) {
       do(group_members=select(., -group_id))
   }
   final_data
+  print("done")
+  #browser()
+  
 }
 
 getAllLatenciesFun <- function(latencies, GroupsAndUsers) {
+  
+  all_users <- unnest(GroupsAndUsers)
+  if ("name" %in% names(all_users)) {
+    colnames(all_users)[which(names(all_users) == "name")] <- "user_id"
+  } else {
+    colnames(all_users)[which(names(all_users) == "fullname")] <- "user_id"
+  }
+  
+  # all_users <- unnest(GroupsAndUsers)
+  # #all_users2 <- unnest(GroupsAndUsers)
+  # 
+  # if ("name" %in% names(all_users1)) {
+  #   
+  #   #all_users1 %<>% rename("name"="user_id")
+  #   colnames(all_users1)[which(names(all_users1) == "name")] <- "user_id"
+  #   
+  # } else {
+  #   
+  #   #all_users1 %<>% rename("fullname"="user_id")
+  #   colnames(all_users1)[which(names(all_users1) == "fullname")] <- "user_id"
+  # }
+  
+  #colnames(all_users2)[which(names(all_users2) == "fullname")] <- "user_id"
+  
+  #browser()
   latencies <- latencies
   allGroups <- GroupsAndUsers %>% 
     select(c("group_id")) %>% 
