@@ -14,6 +14,7 @@ getData <- function(...) {
   
   paste(endpoint, ..., sep="/") %>%
     URLencode %>%
+    #print() %>% 
     fromJSON %>%
     extract2("data")
 }
