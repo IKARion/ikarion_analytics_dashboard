@@ -23,10 +23,6 @@ calculateWorkImbalanceFun <- function(groupTaskSequences, groupsAndUsers) {
   forum_data <- calculateForumWordcountGini(groupTaskSequences %>% filter(verb_id == "http://id.tincanapi.com/verb/replied"))
   wiki_data <- calculateWikiWordcountGini(groupTaskSequences %>% filter(verb_id == "http://id.tincanapi.com/verb/updated"))
   
-  
-  # get list of all users
-  groupsAndUsers <- groupsAndUsers
-  
   # see which users do not appear in the data and add forum and wiki wordcount of 0 so that all users that are assigned to a group 
   # are accounted for in the gini calculation
   
