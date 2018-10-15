@@ -77,7 +77,7 @@ calculateWorkImbalanceFun <- function(groupTaskSequences, groupsAndUsers) {
     group_by(user_id) %>%
     # forum contribution weight:  3
     # wiki contibution  weight:   1
-    mutate(overall_wordcount = sum(3*user_forum_wordcount, user_wiki_wordcount))
+    mutate(overall_wordcount = sum(user_forum_wordcount, user_wiki_wordcount))
   
   
   gini_data <- complete_data %>% 
