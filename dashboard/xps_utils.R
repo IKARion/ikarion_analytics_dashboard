@@ -18,6 +18,33 @@ buildCustomScript <- function(model, scriptTemplate) {
     append(readLines(scriptTemplate)) 
 }
 
+generateGroupTaskSequences <- function(sequences, groupsAndUsers) {
+  
+  
+  data <- sequences %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated") %>%  group_by(group_id) %>% do(sequence=select(., -c(group_id, content)))
+  
+  # groups <- groupsAndUsers %>% 
+  #   select(c(group_id)) %>% 
+  #   mutate(sequence = NULL)
+  # 
+  # groups2 <- groupsAndUsers %>% 
+  #   select(c(group_id)) %>% 
+  #   mutate(sequence = NA)
+  # 
+  # groups3 <- groupsAndUsers %>% 
+  #   select(c(group_id)) %>% 
+  #   mutate(sequence = as.list(as.list(NA)))
+  # 
+  # missing <- anti_join(groups3, data, by = c("group_id"))
+  # 
+  # missing <- anti_join(groups, data, by = c("group_id"))
+  # complete_data <- full_join(missing, data) 
+  # complete data
+  
+  
+  data
+}
+
 calculateWorkImbalanceFun <- function(groupTaskSequences, groupsAndUsers) {
   
   forum_data <- calculateForumWordcountGini(groupTaskSequences %>% filter(verb_id == "http://id.tincanapi.com/verb/replied"))
@@ -84,7 +111,15 @@ calculateWorkImbalanceFun <- function(groupTaskSequences, groupsAndUsers) {
     group_by(group_id) %>% 
     summarise(gini_index = gini(overall_wordcount)*length(overall_wordcount)/(length(overall_wordcount)-1))
   
+  # fix NaN values
+  gini_data[is.nan(gini_data)] <- 0
+  
   gini_data
+}
+
+## change function 
+is.nan.data.frame <- function(x) {
+  do.call(cbind, lapply(x, is.nan))
 }
 
 # calculate Forum wordcunt for every user in every group (for gini calculation)
@@ -135,7 +170,6 @@ calculateWikiWordcountGini <- function(df) {
 }
 
 calculateForumWordcountFun <- function(df, groupsAndUsers) {
-  #browser()
   final_data <- NULL
   
   # get list of all users
@@ -213,8 +247,7 @@ calculateWikiWordcountFun <- function(df, groupsAndUsers) {
   } else {
     colnames(all_users)[which(names(all_users) == "fullname")] <- "user_id"
   }
-  
-  #browser()
+
   #colnames(all_users)[which(names(all_users) == "fullname")] <- "user_id"
   
   all_users <- all_users %>%
@@ -266,35 +299,35 @@ calculateWikiWordcountFun <- function(df, groupsAndUsers) {
 
 getAllLatenciesFun <- function(latencies, GroupsAndUsers) {
   
+  
   all_users <- unnest(GroupsAndUsers)
   if ("name" %in% names(all_users)) {
     colnames(all_users)[which(names(all_users) == "name")] <- "user_id"
   } else {
     colnames(all_users)[which(names(all_users) == "fullname")] <- "user_id"
   }
-  
+
   # all_users <- unnest(GroupsAndUsers)
   # #all_users2 <- unnest(GroupsAndUsers)
-  # 
+  #
   # if ("name" %in% names(all_users1)) {
-  #   
+  #
   #   #all_users1 %<>% rename("name"="user_id")
   #   colnames(all_users1)[which(names(all_users1) == "name")] <- "user_id"
-  #   
+  #
   # } else {
-  #   
+  #
   #   #all_users1 %<>% rename("fullname"="user_id")
   #   colnames(all_users1)[which(names(all_users1) == "fullname")] <- "user_id"
   # }
-  
+
   #colnames(all_users2)[which(names(all_users2) == "fullname")] <- "user_id"
-  
-  #browser()
+
   latencies <- latencies
-  allGroups <- GroupsAndUsers %>% 
-    select(c("group_id")) %>% 
+  allGroups <- GroupsAndUsers %>%
+    select(c("group_id")) %>%
     mutate(latency = 0)
-  
+
   missing <- anti_join(allGroups, latencies, by = c("group_id"))
   complete_data <- full_join(missing, latencies)
   
@@ -302,7 +335,8 @@ getAllLatenciesFun <- function(latencies, GroupsAndUsers) {
 }
 
 
-buildGroupModel <- function(course, from, to, task, groups, average_latencies, work_imbalance, text_contribution_forum, text_contribution_wiki, group_sequences) {
+#buildGroupModel <- function(course, from, to, task, groups, average_latencies, work_imbalance, text_contribution_forum, text_contribution_wiki, group_sequences) {
+buildGroupModel <- function(course, from, to, task, groups, work_imbalance, text_contribution_forum, text_contribution_wiki, group_sequences) {  
   
   model <- list(
     model_metadata=list(
@@ -314,7 +348,7 @@ buildGroupModel <- function(course, from, to, task, groups, average_latencies, w
     ),
     
     # latency list with all groups, forum inative groups have a latency of 0
-    average_latencies=average_latencies,
+    #average_latencies=average_latencies,
     work_imbalance = work_imbalance,
     text_contributions_forum = text_contribution_forum,
     text_contributions_wiki = text_contribution_wiki,
