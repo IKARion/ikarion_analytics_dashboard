@@ -29,7 +29,8 @@ work_imbalance <- calculateWorkImbalanceFun(groupTaskSequences, groupsAndUsers)
 forum_sequences <- groupTaskSequences %>% filter(verb_id == "http://id.tincanapi.com/verb/replied")
 wiki_sequences <- groupTaskSequences %>% filter(verb_id == "http://id.tincanapi.com/verb/updated")
 
-group_sequences <- groupTaskSequences %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated") %>%  group_by(group_id) %>% do(sequence=select(., -c(group_id, content)))
+#group_sequences <- groupTaskSequences %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated") %>%  group_by(group_id) %>% do(sequence=select(., -c(group_id, content)))
+group_sequences <- generateGroupTaskSequences( groupTaskSequences, groupsAndUsers)
 
 forum_wordcount <- calculateForumWordcountFun(forum_sequences, groupsAndUsers)
 wiki_wordcount <- calculateWikiWordcountFun(wiki_sequences, groupsAndUsers)
@@ -39,7 +40,7 @@ model <- buildGroupModel(course = course,
                 to = pTo,
                 task = task,
                 groups = groupsAndUsers,
-                average_latencies = groupLatencies,
+                #average_latencies = groupLatencies,
                 work_imbalance = work_imbalance,
                 text_contribution_forum = forum_wordcount,
                 text_contribution_wiki = wiki_wordcount,
