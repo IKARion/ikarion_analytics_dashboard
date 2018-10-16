@@ -72,10 +72,6 @@ getGroupListForTask <- function(courseId, taskId) {
   courseId <- replaceUrlChars(courseId)
   
   groups <- getData("groups/groups_for_task", courseId, taskId)
-  
-  groups <- select(groups, id)
-  groups <- rename(groups, group = id)
-  
   groups
 }
 
@@ -105,7 +101,7 @@ getGroupSequence <- function(courseId, groupId) {
 getGroupTaskSequence <- function(courseId, groupId, taskId) {
   
   courseId <- replaceUrlChars(courseId)
-  getData("groups/grouptask_activities", courseId, groupId, taskId)
+  data <- getData("groups/grouptask_activities", courseId, groupId, taskId) %>% as_data_frame
 }
 
 getGroupRepositories <- function() {
