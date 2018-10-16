@@ -72,6 +72,10 @@ getGroupListForTask <- function(courseId, taskId) {
   courseId <- replaceUrlChars(courseId)
   
   groups <- getData("groups/groups_for_task", courseId, taskId)
+  
+  groups <- select(groups, id)
+  groups <- rename(groups, group = id)
+  
   groups
 }
 
