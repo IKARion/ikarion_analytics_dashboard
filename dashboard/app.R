@@ -34,8 +34,8 @@ ui <- dashboardPage(
     selectInput("group_tasks", "Group Task", list(none="none")),
     dateRangeInput("time_range", 
                    label = "Period", 
-                   start = "2018-05-01",
-                   end = "2018-09-30",
+                   start = "2018-10-01",
+                   end = "2018-10-30",
                    min = "2018-04-01",
                    max = "2018-12-30",
                    format = "dd.mm.yyyy"),
@@ -133,17 +133,19 @@ server <- function(input, output, session) {
                              input$time_range[2],
                              selectedTask(),
                              getGroupsAndUsers(), 
-                             getAllGroupLatencies(),
+                             #getAllGroupLatencies(),
                              calculateWorkImbalance(),
                              (calculateForumWordcount(groupTaskSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/replied"))),
                              (calculateWikiWordcount(groupTaskSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/updated"))),
-                             (groupTaskSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated") %>%  group_by(group_id) %>% do(sequence=select(., -c(group_id, content))))
+                             #(groupTaskSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated") %>%  group_by(group_id) %>% do(sequence=select(., -c(group_id, content))))
+                             generateGroupTaskSequences(groupTaskSequences(), getGroupsAndUsers())
                              )
     
     model
   })
   
-  # TODO insert non active users with wordcount = 0, currently only active users are accounted for
+  
+  # calculate work imbalance
   calculateWorkImbalance <- function() {
     data <- calculateWorkImbalanceFun(groupTaskSequences(), getGroupsAndUsers())
   }
