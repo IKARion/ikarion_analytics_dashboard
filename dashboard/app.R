@@ -215,7 +215,8 @@ server <- function(input, output, session) {
   callModule(modelsToXps, "xps")
 }
 
-# Run the application 
+# Run the application
+options(shiny.port=5341)
 captureStackTraces(
 shinyApp(ui = ui, server = server))
 
