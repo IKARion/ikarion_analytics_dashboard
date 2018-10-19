@@ -10,6 +10,17 @@ replaceUrlChars <- function(string) {
   string <- gsub("?", "$qmark$", string, fixed = T)
 }
 
+# add "answer_required" = TRUE if "?" occurs
+detectQuestion <- function(df) {
+  df <- df %>%
+    # require_answer true if question mark is contained
+    mutate(requires_answer = ifelse(grepl("?", content, fixed = T), TRUE, FALSE)) %>%
+    # requires_anser false if activity appeard in wiki
+    mutate(requires_answer = ifelse((object_type == "http://collide.info/moodle_wiki_page"), FALSE, requires_answer))
+  df
+  
+}
+
 getData <- function(...) {
   
   paste(endpoint, ..., sep="/") %>%
@@ -106,6 +117,16 @@ getGroupTaskSequence <- function(courseId, groupId, taskId) {
   
   courseId <- replaceUrlChars(courseId)
   data <- getData("groups/grouptask_activities", courseId, groupId, taskId) %>% as_data_frame
+  
+  # TODO enable this block for question detection 
+  #***
+  # # add variable that decides whether an answer is required to the post or not based on if a "?" occures in the text 
+  # if(nrow(data) > 0) {
+  #   data <- detectQuestion(data)
+  # }
+  #***
+  
+  data
 }
 
 getGroupRepositories <- function() {
