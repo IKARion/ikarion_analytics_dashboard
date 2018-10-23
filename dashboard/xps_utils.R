@@ -45,6 +45,13 @@ generateGroupTaskSequences <- function(sequences, groupsAndUsers) {
   data
 }
 
+generateGroupTaskSequencesWithContent <- function(sequences, groupsAndUsers) {
+  
+  
+  data <- sequences %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated") %>%  group_by(group_id) %>% do(sequence=select(., -c(group_id)))
+  data
+}
+
 calculateWorkImbalanceFun <- function(groupTaskSequences, groupsAndUsers) {
   
   forum_data <- calculateForumWordcountGini(groupTaskSequences %>% filter(verb_id == "http://id.tincanapi.com/verb/replied"))
@@ -102,7 +109,7 @@ calculateWorkImbalanceFun <- function(groupTaskSequences, groupsAndUsers) {
   
   complete_data <- full_join(missing, merge) %>% 
     group_by(user_id) %>%
-    # forum contribution weight:  3
+    # forum contribution weight:  1
     # wiki contibution  weight:   1
     mutate(overall_wordcount = sum(user_forum_wordcount, user_wiki_wordcount))
   
@@ -361,8 +368,10 @@ buildGroupModel <- function(course, from, to, task, groups, work_imbalance, text
   
 }
 
-# clean html tags from forum posts
+
+# clean html tags and "&nbsp;" from forum posts
 htmlTagClean <- function(htmlString) {
+  htmlString <- gsub("&nbsp;", "", htmlString)
   return(gsub("<.*?>", "", htmlString))
 }
 
