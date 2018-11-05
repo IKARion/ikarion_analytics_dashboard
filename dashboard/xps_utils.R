@@ -8,6 +8,17 @@ require(reldist)
 xpsEndpoint <- appConfig$xpsEndpoint
 managementEndpoint <- appConfig$managementEndpoint
 
+# clean content (html tags, punctation, ...)
+htmlTagClean <- function(htmlString) {
+  htmlString <- gsub("<.*?>", " ", htmlString)      # remove html tags
+  htmlString <- gsub("&nbsp;", " ", htmlString)     # remove no-break spaces
+  htmlString <- gsub("['\"]", " ", htmlString)      # remove single and double quotes
+  htmlString <- gsub("[\\\\/]", " ", htmlString)    # remove slash und backslash
+  htmlString <- gsub("[[:punct:]]"," ", htmlString) # remove punctation
+  htmlString <- gsub("\\s+", " ", htmlString)       # remove redundant white spaces
+  return(htmlString)
+}
+
 buildCustomScript <- function(model, scriptTemplate) {
   
   c(paste("setwd('", getwd(), "')", sep=""),
@@ -20,35 +31,14 @@ buildCustomScript <- function(model, scriptTemplate) {
 
 generateGroupTaskSequences <- function(sequences, groupsAndUsers) {
   
-  
   data <- sequences %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated") %>%  group_by(group_id) %>% do(sequence=select(., -c(group_id, content)))
-  
-  # groups <- groupsAndUsers %>% 
-  #   select(c(group_id)) %>% 
-  #   mutate(sequence = NULL)
-  # 
-  # groups2 <- groupsAndUsers %>% 
-  #   select(c(group_id)) %>% 
-  #   mutate(sequence = NA)
-  # 
-  # groups3 <- groupsAndUsers %>% 
-  #   select(c(group_id)) %>% 
-  #   mutate(sequence = as.list(as.list(NA)))
-  # 
-  # missing <- anti_join(groups3, data, by = c("group_id"))
-  # 
-  # missing <- anti_join(groups, data, by = c("group_id"))
-  # complete_data <- full_join(missing, data) 
-  # complete data
-  
-  
   data
 }
 
 generateGroupTaskSequencesWithContent <- function(sequences, groupsAndUsers) {
   
   
-  data <- sequences %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated") %>%  group_by(group_id) %>% do(sequence=select(., -c(group_id)))
+  data <- sequences %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated") %>% mutate(content = htmlTagClean(content)) %>%  group_by(group_id) %>% do(sequence=select(., -c(group_id)))
   data
 }
 
@@ -112,6 +102,7 @@ calculateWorkImbalanceFun <- function(groupTaskSequences, groupsAndUsers) {
     # forum contribution weight:  1
     # wiki contibution  weight:   1
     mutate(overall_wordcount = sum(user_forum_wordcount, user_wiki_wordcount))
+  
   
   
   gini_data <- complete_data %>% 
@@ -366,13 +357,6 @@ buildGroupModel <- function(course, from, to, task, groups, work_imbalance, text
   
   model
   
-}
-
-
-# clean html tags and "&nbsp;" from forum posts
-htmlTagClean <- function(htmlString) {
-  htmlString <- gsub("&nbsp;", "", htmlString)
-  return(gsub("<.*?>", "", htmlString))
 }
 
 addScheduledTask <- function(model, interval, scriptTemplate, label) {
