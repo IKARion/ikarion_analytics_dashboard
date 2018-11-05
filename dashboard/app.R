@@ -32,6 +32,7 @@ ui <- dashboardPage(
   dashboardSidebar(
     selectInput("courses", "Course", generateCourseList()),
     selectInput("group_tasks", "Group Task", list(none="none")),
+    
     dateRangeInput("time_range", 
                    label = "Period", 
                    start = "2018-10-01",
@@ -42,6 +43,8 @@ ui <- dashboardPage(
     sidebarMenu(id="tabs",
       menuItem("User Models", tabName = "user_model", icon = icon("dashboard")),
       menuItem("Group Models", tabName = "group_model", icon = icon("dashboard")),
+      checkboxInput("content", "include \"content\"", value = FALSE),
+      #checkboxInput("req_answer", "include \"requires_answer\"", value = FALSE),
       menuItem("XPS", tabName = "xps", icon = icon("calendar"))
     )
   ),
@@ -138,7 +141,12 @@ server <- function(input, output, session) {
                              (calculateForumWordcount(groupTaskSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/replied"))),
                              (calculateWikiWordcount(groupTaskSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/updated"))),
                              #(groupTaskSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated") %>%  group_by(group_id) %>% do(sequence=select(., -c(group_id, content))))
-                             generateGroupTaskSequences(groupTaskSequences(), getGroupsAndUsers())
+                             if(input$content == TRUE) {
+                               generateGroupTaskSequencesWithContent(groupTaskSequences(), getGroupsAndUsers())
+                             } else {
+                               generateGroupTaskSequences(groupTaskSequences(), getGroupsAndUsers())
+                             }
+                             # generateGroupTaskSequencesWithContent(groupTaskSequences(), getGroupsAndUsers())
                              )
     
     model
