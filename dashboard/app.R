@@ -70,7 +70,7 @@ ui <- dashboardPage(
                 downloadButton("downloadGM", "Download Group Model"),
                 box(
                   title = "Send group model to XPS",
-                  selectInput("send_interval_GM", "Interval", c("once", "minute", "hour")),
+                  selectInput("send_interval_GM", "Interval", c("once", "minute", "10 minutes", "hour")),
                   actionButton("GM_to_XPS", "Send")
                 )
               ),
