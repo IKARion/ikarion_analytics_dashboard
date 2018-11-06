@@ -57,7 +57,7 @@ ui <- dashboardPage(
                 downloadButton("downloadUM", "Download User Model"),
                 box(
                   title = "Send users models to XPS",
-                  selectInput("send_interval_UM", "Interval", c("once", "minute", "hour")),
+                  selectInput("send_interval_UM", "Interval", c("once", "minute", "10 minutes", "hour")),
                   actionButton("UM_to_XPS", "Send")
                 )
               ),
