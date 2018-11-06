@@ -365,6 +365,10 @@ addScheduledTask <- function(model, interval, scriptTemplate, label) {
   
   if (interval %in% c("minute", "hour")) {
     frequencyMinutes <- 1
+    if (interval == "10 minutes") {
+      frequencyMinutes <- 10
+    }
+    
     if (interval == "hour") {
       frequencyMinutes <- 60
     }
