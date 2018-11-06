@@ -363,12 +363,11 @@ addScheduledTask <- function(model, interval, scriptTemplate, label) {
 
   sendModelToXPS(model)
   
-  if (interval %in% c("minute", "hour")) {
+  if (interval %in% c("minute", "10 minutes", "hour")) {
     frequencyMinutes <- 1
     if (interval == "10 minutes") {
       frequencyMinutes <- 10
     }
-    
     if (interval == "hour") {
       frequencyMinutes <- 60
     }
