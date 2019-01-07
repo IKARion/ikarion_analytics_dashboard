@@ -38,7 +38,7 @@ ui <- dashboardPage(
                    start = "2018-10-01",
                    end = "2018-10-30",
                    min = "2018-04-01",
-                   max = "2018-12-30",
+                   max = "2019-12-30",
                    format = "dd.mm.yyyy"),
     sidebarMenu(id="tabs",
       menuItem("User Models", tabName = "user_model", icon = icon("dashboard")),
