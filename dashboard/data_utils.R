@@ -67,6 +67,8 @@ getGroupsAndUsersForCourse <- function(courseId, task) {
   colnames(data)[which(names(data) == "id")] <- "group_id"
   data
   
+  #browser()
+  
 }
 
 getGroupListForCourse <- function(courseId) {
@@ -86,6 +88,8 @@ getGroupListForTask <- function(courseId, taskId) {
   
   groups <- select(groups, id)
   groups <- rename(groups, group = id)
+  
+  #browser()
   
   groups
 }
@@ -129,6 +133,38 @@ getGroupTaskSequence <- function(courseId, groupId, taskId) {
   data
 }
 
+# get selfassessments for all users in a group
+# timestamp necessary for post analysis if we want to look at user assessments over time
+# this function gives a list of the most recent user ratings before the given timestamp
+getGroupSelfAssessments <- function(courseId, groupId, taskId, timestamp) {
+  courseId <- replaceUrlChars(courseId)
+  
+  data <- getData("groups/group_self_assessment", courseId, groupId, taskId, timestamp) %>% as_data_frame()
+  
+  
+  # courseId <- replaceUrlChars(courseId)
+  # data <- getData("groups/grouptask_activities", courseId, groupId, taskId) %>% as_data_frame
+  
+}
+
+# get weighted forum wordcounts for all users in a group
+# timestamp necessary for post analysis if we want to look at weighted wordcounts over time
+# this function gives a list of the most recent weighted forum wordcounts before the given timestamp
+getGroupWeightedForumWordcount <- function(courseId, groupId, taskId, timestamp) {
+  courseId <- replaceUrlChars(courseId)
+  
+  data <- getData("groups/weighted_forum_wordcount", courseId, groupId, taskId, timestamp) %>% as_data_frame()
+}
+
+# get weighted wiki wordcounts for all users in a group
+# timestamp necessary for post analysis if we want to look at weighted wordcounts over time
+# this function gives a list of the most recent weighted wiki wordcounts before the given timestamp
+getGroupWeightedWikiWordcount <- function(courseId, groupId, taskId, timestamp) {
+  courseId <- replaceUrlChars(courseId)
+  
+  data <- getData("groups/weighted_wiki_wordcount", courseId, groupId, taskId, timestamp) %>% as_data_frame()
+}
+
 getGroupRepositories <- function() {
   data_frame(repo=getData("groups/repositories"))
 }
@@ -167,6 +203,68 @@ getGroupTaskSequencesAll <- function(courseId, taskId) {
   getGroupListForTask(courseId, taskId) %>%
     rowwise %>%
     do(getGroupTaskSequence(courseId, .$group, taskId))
+  
+  #browser()
+  
+  
+}
+
+getGroupSelfAssessmentsAll <- function(courseId, taskId, timestamp) {
+
+  browser()
+    courseId <- replaceUrlChars(courseId)
+
+  # uncomment when endpoint is implemented  
+  # getGroupListForTask(courseId, taskId) %>%
+  #   rowwise %>%
+  #   do(getGroupSelfAssessments(courseId, .$group, taskId, timestamp))
+  
+  # insert dummy data
+  data <- dummy_SA_T1 %>% 
+    group_by(group_id) %>% 
+    do(group_members = select(., -c(group_id, timestamp)))
+  
+  data
+
+}
+
+getGroupWeightedForumWordcountAll <- function(courseId, taskId, timestamp) {
+  courseId <- replaceUrlChars(courseId)
+  
+  # uncomment when endpoint is implemented  
+  # getGroupListForTask(courseId, taskId) %>%
+  #   rowwise %>%
+  #   do(getGroupWeightedForumWordcount(courseId, .$group, taskId, timestamp))
+  
+  # insert dummy data
+  
+  #browser()
+  
+  data <- dummy_WFW_T1 %>% 
+    group_by(group_id) %>%
+    do(group_members = select(., -c(group_id, timestamp)))
+  
+
+  data
+
+}
+
+getGroupWeightedWikiWordcountAll <- function(courseId, taskId, timestamp) {
+  courseId <- replaceUrlChars(courseId)
+  
+  # uncomment when endpoint is implemented  
+  # getGroupListForTask(courseId, taskId) %>%
+  #   rowwise %>%
+  #   do(getGroupWeightedWikiWordcount(courseId, .$group, taskId, timestamp))
+  
+  # insert dummy data
+  data <- dummy_WWW_T1 %>% 
+    group_by(group_id) %>%
+    do(group_members = select(., -c(group_id, timestamp)))
+  
+  
+  data
+  
 }
 
 getGitCommitLatencies <- function(start, end) {
@@ -270,3 +368,4 @@ getGroupLatencyTest <- function() {
     latency=rnorm(20,10,sd = 10) %>% abs
   )
 }
+
