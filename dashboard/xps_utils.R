@@ -4,6 +4,10 @@ require(jsonlite)
 require(ngram)
 require(tidyr)
 require(reldist)
+require(schoolmath)
+require(anytime)
+
+source("dummy_data.R")
 
 xpsEndpoint <- appConfig$xpsEndpoint
 managementEndpoint <- appConfig$managementEndpoint
@@ -29,17 +33,177 @@ buildCustomScript <- function(model, scriptTemplate) {
     append(readLines(scriptTemplate)) 
 }
 
-generateGroupTaskSequences <- function(sequences, groupsAndUsers) {
+generateGroupTaskSequences <- function(sequences, groupsAndUsers, task) {
   
-  data <- sequences %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated") %>%  group_by(group_id) %>% do(sequence=select(., -c(group_id, content)))
+  
+  ## HERE check that features are filtered
+  
+  # classify activities
+  data <- classify_activities(sequences, task)
+  
+  data <- data %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated") %>%  group_by(group_id) %>% do(sequence=select(., -c(group_id, content)))
   data
 }
 
-generateGroupTaskSequencesWithContent <- function(sequences, groupsAndUsers) {
+generateGroupTaskSequencesWithContent <- function(sequences, groupsAndUsers, task) {
   
-  
-  data <- sequences %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated") %>% mutate(content = htmlTagClean(content)) %>%  group_by(group_id) %>% do(sequence=select(., -c(group_id)))
+  # classify activities
+  data <- classify_activities(sequences, task)
+  data <- data %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated")  %>%  group_by(group_id) %>% do(sequence=select(., -c(group_id)))
   data
+}
+
+# classify the activities based on the model that ws generated using the mercur mooc data
+# possible classes: coordination, monitoring, major contribution, minor contribution, other
+classify_activities <- function(data, task) {
+  
+  ### adding start activity to each group sequence ###
+  
+  start <- data[1,]
+  start$content <- "start"
+  start$object_id <- "start"
+  start$object_name <- "start"
+  start$object_type <- "start"
+  start$timestamp <- task$task_start
+  start$user_id <- "start"
+  start$verb_id <- "start"
+  
+  sequences_with_start <- data.frame()
+  
+  # adding a start activity to one group sequence
+  addStartActivity <- function(df, start) {
+    start_activity <- start
+    start_activity$group_id <- df[1,]$group_id
+    
+    group_sequence <- rbind(df, start_activity)
+    
+    sequences_with_start <<- rbind(sequences_with_start, group_sequence)
+  }
+  
+  ### calculating features ###
+  
+  data %>% 
+    group_by(group_id) %>% 
+    do(addStartActivity(., start))
+  
+  # clean content
+  sequences_with_start$content <- htmlTagClean(sequences_with_start$content)
+  
+  # order first -> last
+  sequences_with_start <- sequences_with_start %>%
+    group_by(group_id) %>%
+    arrange(timestamp, .by_group = T)
+  
+  # calculate features
+  # 1) wordcount   needs to be calculated for wiki edits
+  # 2) type        done
+  # 3) tool_change done
+  # 4) idle_since  done
+  # 5) position    done
+  # 6) user_change done
+  # 7) period      done
+  
+  # 8) fixed wordcount done
+  
+  # 1) add wordcount
+  sequences_with_start <- sequences_with_start %>% 
+    rowwise() %>% 
+    mutate(wordcount = wordcount(content))
+  
+  # 2) add type
+  sequences_with_start$type <- NA
+  sequences_with_start$type[sequences_with_start$object_type == "http://collide.info/moodle_wiki_page"] <- "wiki"
+  sequences_with_start$type[sequences_with_start$object_type == "http://id.tincanapi.com/activitytype/forum-topic"] <- "forum"
+  sequences_with_start$type[sequences_with_start$object_type == "start"] <- "start"
+  
+  sequences_with_start <- sequences_with_start %>% 
+    group_by(group_id) %>% 
+    # 3) add tool change 
+    mutate(tool_change = ifelse(type == lag(type), F, T)) %>%
+    
+    # 4) add idle since
+    mutate(idle_since = as.numeric(timestamp) - lag(as.numeric(timestamp))) %>% 
+    
+    # 5) add position in sequence
+    mutate(position = row_number()-1) %>% 
+    
+    # 6) add user change
+    mutate(user_change = ifelse(user_id == lag(user_id), F, T)) %>% 
+    
+    # add day (for period calculation)
+    mutate(day = anydate(as.numeric(timestamp))) # %>%
+  
+  
+  # 7 ) add period: timeperiod that the activity appeared on (1-7) (one period covers 2 days)
+  
+  # task begin is the day of the start activity (which is added based on the task context)
+  task_begin <- sequences_with_start[1,]$day
+  
+  sequences_with_start <- sequences_with_start %>% 
+    group_by(group_id) %>% 
+    # add period
+    mutate(period = as.numeric(day - task_begin) + 1) %>%
+    # fix period
+    mutate(period = ifelse(is.odd(period), period+1, period)) %>% 
+    mutate(period = period/2) # %>% 
+  
+  
+  # 8) correct text change for wiki entries
+  
+  forum_and_start <- sequences_with_start %>% 
+    filter(type %in% c("forum", "start"))
+  
+  wiki <- sequences_with_start %>% 
+    filter(type == "wiki")
+  
+  # calculate wordcount as diff between wordcount of current and last contribution
+  wiki <- wiki %>% 
+    group_by(group_id) %>% 
+    mutate(wordcount_fixed = wordcount - lag(wordcount))
+  
+  # fix negative wordcounts
+  wiki$wordcount_fixed[wiki$wordcount_fixed < 0] <- 0
+  # fix wordcounts for first contributions
+  wiki$wordcount_fixed[is.na(wiki$wordcount_fixed)] <- wiki$wordcount[is.na(wiki$wordcount_fixed)]
+  
+  wiki$wordcount <- wiki$wordcount_fixed
+  wiki <- wiki %>% 
+    subset(select = -wordcount_fixed)
+  
+  forum_and_start$wordcount <- as.numeric(forum_and_start$wordcount)
+  wiki$wordcount <- as.numeric(wiki$wordcount)
+  
+  
+  typeof(forum_and_start$wordcount)
+  typeof(wiki$wordcount)
+  
+  #all_data <- rbind(forum, etherpad)
+  all_data <- bind_rows(forum_and_start, wiki) %>% 
+    group_by(group_id) %>% 
+    dplyr::arrange(timestamp, .by_group = T)  
+  
+  all_data_without_start <- all_data %>%
+    filter(!type == "start")
+  
+  ### classifying activities ###
+  
+  # load model
+  classification_model <- readRDS("./model/rf_model.rds")
+  
+  all_data_without_start$type <- as.factor(all_data_without_start$type)
+  
+  predicted_classes <- predict(classification_model, all_data_without_start)
+  all_data_without_start$class <- predicted_classes
+
+  # delete features from dataset
+  all_data_without_start <- all_data_without_start %>% 
+    subset(select = -c(wordcount, type, tool_change, idle_since, position, user_change, day, period))
+  
+  all_data_without_start
+}
+
+calculateSelfAssessmentFun <- function(course, task, timestamp) {
+  
 }
 
 calculateWorkImbalanceFun <- function(groupTaskSequences, groupsAndUsers) {
@@ -166,6 +330,7 @@ calculateWikiWordcountGini <- function(df) {
     #print("no wiki activity")
   }
 }
+
 
 calculateForumWordcountFun <- function(df, groupsAndUsers) {
   final_data <- NULL
@@ -334,7 +499,53 @@ getAllLatenciesFun <- function(latencies, GroupsAndUsers) {
 
 
 #buildGroupModel <- function(course, from, to, task, groups, average_latencies, work_imbalance, text_contribution_forum, text_contribution_wiki, group_sequences) {
-buildGroupModel <- function(course, from, to, task, groups, work_imbalance, text_contribution_forum, text_contribution_wiki, group_sequences) {  
+buildGroupModel <- function(course, 
+                            #from, 
+                            #to, 
+                            task, 
+                            groups, 
+                            self_assessment, 
+                            weighted_forum_wordcount, 
+                            weighted_wiki_wordcount, 
+                            #work_imbalance, 
+                            #text_contribution_forum, 
+                            #text_contribution_wiki, 
+                            group_sequences) {  
+  
+  #browser()
+  
+  model <- list(
+    model_metadata=list(
+      course_id=course, 
+      #period_from=from,
+      #period_to=to,
+      task_context=list(task),
+      groups = groups
+    ),
+    
+    # latency list with all groups, forum inative groups have a latency of 0
+    #average_latencies=average_latencies,
+    
+    weighted_forum_wordcount = weighted_forum_wordcount, 
+    weighted_wiki_wordcount = weighted_wiki_wordcount,
+    self_assessment = self_assessment,
+    
+    #work_imbalance = work_imbalance,
+    #text_contributions_forum = text_contribution_forum,
+    #text_contributions_wiki = text_contribution_wiki,
+    # group TASK sequences containing relavant activities
+    # USE THIS for current group model specification
+    group_sequences=group_sequences
+  )
+  
+  model
+}
+
+
+#***
+buildGroupModel2 <- function(course, from, to, task, groups, work_imbalance, text_contribution_forum, text_contribution_wiki, group_sequences) {  
+  
+  #browser()
   
   model <- list(
     model_metadata=list(
@@ -347,6 +558,8 @@ buildGroupModel <- function(course, from, to, task, groups, work_imbalance, text
     
     # latency list with all groups, forum inative groups have a latency of 0
     #average_latencies=average_latencies,
+    
+    #self_assessment = self_assessment,
     work_imbalance = work_imbalance,
     text_contributions_forum = text_contribution_forum,
     text_contributions_wiki = text_contribution_wiki,
@@ -356,7 +569,20 @@ buildGroupModel <- function(course, from, to, task, groups, work_imbalance, text
   )
   
   model
+}
+#***
+
+# send empty group model that only contains the task and groups before a relevant activity occured
+buildEmptyGroupModel <- function(course, task, groups) {  
+  model <- list(
+    model_metadata=list(
+      course_id=course, 
+      task_context=list(task),
+      groups = groups
+    )
+  )
   
+  model
 }
 
 addScheduledTask <- function(model, interval, scriptTemplate, label) {
