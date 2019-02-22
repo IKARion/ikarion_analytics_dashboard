@@ -1,0 +1,203 @@
+---
+title: "integrated classification"
+output: html_notebook
+---
+
+```{r}
+data <- read.csv2("/home/doberstein/Desktop/test_data.csv", stringsAsFactors = F)
+task <- read.csv2("/home/doberstein/Desktop/task_data.csv", stringsAsFactors = F)
+
+#adding start activity to each group sequence
+start <- test_data[1,]
+start$content <- "start"
+start$object_id <- "start"
+start$object_name <- "start"
+start$object_type <- "start"
+start$timestamp <- task$task_start
+start$user_id <- "start"
+start$verb_id <- "start"
+
+sequences_with_start <- data.frame()
+
+addStartActivity <- function(df, start) {
+  start_activity <- start
+  start_activity$group_id <- df[1,]$group_id
+  
+  group_sequence <- rbind(df, start_activity)
+  #browser()
+  
+  sequences_with_start <<- rbind(sequences_with_start, group_sequence)
+  
+  #print(sequences_with_start)
+}
+
+data %>% 
+  group_by(group_id) %>% 
+  do(addStartActivity(., start))
+
+# order first -> last
+sequences_with_start <- sequences_with_start %>%
+  group_by(group_id) %>%
+  arrange(timestamp, .by_group = T)
+
+# calculate features
+  # 1) wordcount   needs to be calculated for wiki edits
+  # 2) type        done
+  # 3) tool_change done
+  # 4) idle_since  done
+  # 5) position    done
+  # 6) user_change done
+  # 7) period      done
+
+  # 8) fixed wordcount done
+
+# 1) add wordcount
+sequences_with_start <- sequences_with_start %>% 
+  rowwise() %>% 
+  mutate(wordcount = wordcount(content))
+
+# 2) add type
+sequences_with_start$type <- NA
+sequences_with_start$type[sequences_with_start$object_type == "http://collide.info/moodle_wiki_page"] <- "wiki"
+sequences_with_start$type[sequences_with_start$object_type == "http://id.tincanapi.com/activitytype/forum-topic"] <- "forum"
+sequences_with_start$type[sequences_with_start$object_type == "start"] <- "start"
+
+sequences_with_start <- sequences_with_start %>% 
+  group_by(group_id) %>% 
+  # 3) add tool change 
+  mutate(tool_change = ifelse(type == lag(type), F, T)) %>%
+  
+  # 4) add idle since
+  mutate(idle_since = as.numeric(timestamp) - lag(as.numeric(timestamp))) %>% 
+  
+  # 5) add position in sequence
+  mutate(position = row_number()-1) %>% 
+
+  # 6) add user change
+  mutate(user_change = ifelse(user_id == lag(user_id), F, T)) %>% 
+
+  # add day (for period calculation)
+  mutate(day = anydate(timestamp)) # %>%
+
+  
+# 7 ) add period: timeperiod that the activity appeared on (1-7) (one period covers 2 days)
+
+# task begin is the day of the start activity (which is added based on the task context)
+task_begin <- sequences_with_start[1,]$day
+
+sequences_with_start <- sequences_with_start %>% 
+  group_by(group_id) %>% 
+  
+  # add period
+  mutate(period = as.numeric(day - task_begin) + 1) %>%
+  
+  # fix period
+  mutate(period = ifelse(is.odd(period), period+1, period)) %>% 
+  mutate(period = period/2) # %>% 
+    
+
+# 8) correct text change for wiki entries
+
+forum_and_start <- sequences_with_start %>% 
+  filter(type %in% c("forum", "start"))
+
+wiki <- sequences_with_start %>% 
+  filter(type == "wiki")
+
+# calculate wordcount as diff between wordcount of current and last contribution
+wiki <- wiki %>% 
+  group_by(group_id) %>% 
+  mutate(wordcount_fixed = wordcount - lag(wordcount))
+
+# fix negative wordcounts
+wiki$wordcount_fixed[wiki$wordcount_fixed < 0] <- 0
+# fix wordcounts for first contributions
+wiki$wordcount_fixed[is.na(wiki$wordcount_fixed)] <- wiki$wordcount[is.na(wiki$wordcount_fixed)]
+
+wiki$wordcount <- wiki$wordcount_fixed
+wiki <- wiki %>% 
+  subset(select = -wordcount_fixed)
+
+forum_and_start$wordcount <- as.numeric(forum_and_start$wordcount)
+wiki$wordcount <- as.numeric(wiki$wordcount)
+
+
+typeof(forum_and_start$wordcount)
+typeof(wiki$wordcount)
+
+#all_data <- rbind(forum, etherpad)
+all_data <- bind_rows(forum_and_start, wiki) %>% 
+  group_by(group_id) %>% 
+  dplyr::arrange(timestamp, .by_group = T)  
+
+all_data_without_start <- all_data %>%
+  filter(!type == "start")
+
+
+# classify data
+# load model
+
+classification_model <- readRDS("./model/rf_model.rds")
+
+# prediction_t1_t2_t3 <- predict(rf_fit, t1_t2_t3_sequences)
+
+#is.factor(all_data_without_start$type)
+
+#unique(all_data_without_start$type)
+
+all_data_without_start$type <- as.factor(all_data_without_start$type)
+#levels(all_data_without_start$type)
+
+predicted_classes <- predict(classification_model, all_data_without_start)
+all_data_without_start$predicted_class <- predicted_classes
+
+# adding gaps 
+
+# function which adds "gap" activites into the sequences
+
+with_gaps <- all_data_without_start %>% 
+  subset(select = -c(position, user_change, day, period, tool_change, idle_since))
+
+sequences_with_gaps <- data.frame()
+gaptime <- 86400
+
+with_gaps %>% 
+  group_by(group_id) %>% 
+  do(addGaps(., gaptime))
+
+addGaps <- function(df, gaptime) {
+  
+  browser()
+  first_row <- df[1,]
+  first_row$content <- "gap"
+  first_row$object_id <- "gap"
+  first_row$object_name <- "gap"
+  first_row$object_type <- "gap"
+  first_row$user_id <- "gap"
+  first_row$verb_id <- "gap"
+  first_row$wordcount <- 0  
+  first_row$type <- "gap"
+  
+  
+  
+  
+  
+  
+  #   first_row <- df[1,]
+#   sequence <- rbind(first_row, df)
+# 
+#   sequence[1,]$content <- "start"
+#   sequence[1,]$object_id <- "start"
+#   sequence[1,]$object_name <- "start"
+#   sequence[1,]$object_type <- "start"
+#   sequence[1,]$user_id <- "start"
+#   sequence[1,]$verb_id <- "start"
+#   sequence[1,]$wordcount <- 0
+#   sequence[1,]$condition <- df[1,]$condition
+#   sequence[1,]$type <- "start"
+#   sequence[1,]$class <- "start"
+  
+}
+
+```
+
