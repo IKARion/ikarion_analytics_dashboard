@@ -57,3 +57,13 @@ if (!require(shinycssloaders)) {
   install.packages("shinycssloaders")
   require(shinycssloaders)
 }
+
+if (!require(anytime)) {
+  install.packages("anytime")
+  require(anytime)
+}
+
+if (!require(schoolmath)) {
+  install.packages("schoolmath")
+  require(schoolmath)
+}
