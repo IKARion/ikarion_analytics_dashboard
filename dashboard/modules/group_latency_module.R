@@ -33,6 +33,19 @@ groupLatency <- function(input, output, session, courses, group_tasks, timeRange
     df
   })
   
+  ### moved to app.R ###
+  # groupSelfAssessments <- reactive({
+  #   df <- getGroupSelfAssessmentsAll(courses(), group_tasks(), as.numeric(Sys.time()))
+  # })
+  # 
+  # groupWeightedForumWordcount <- reactive({
+  #   df <- getGroupWeightedForumWordcountAll(courses(), group_tasks(), as.numeric(Sys.time()))
+  # })
+  # 
+  # groupWeightedWikiWordcount <- reactive({
+  #   df <- getGroupWeightedWikiWordcountAll(courses(), group_tasks(), as.numeric(Sys.time()))
+  # })
+  #######################
   
   groupLatencies <- reactive({
     trange <- timeRange() 
@@ -59,5 +72,11 @@ groupLatency <- function(input, output, session, courses, group_tasks, timeRange
       DT::datatable()
   )
   
-  list(sequences=groupSequences, latencies=groupLatencies, taskSequences=groupTaskSequences)
+  list(sequences=groupSequences, 
+       latencies=groupLatencies, 
+       taskSequences=groupTaskSequences 
+       #selfAssessments=groupSelfAssessments, 
+       #weightedForumWordcount=groupWeightedForumWordcount, 
+       #weightedWikiWordcount=groupWeightedWikiWordcount)
+  )
 }
