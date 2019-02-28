@@ -154,14 +154,17 @@ getGroupWeightedWikiWordcountAll <- function(courseId, taskId, timestamp, groups
 generateGroupTaskSequences <- function(sequences, groupsAndUsers, task) {
   
   data <- data.frame()
-  
+  #browser()
   if(dim(sequences)[1] > 0) {
     # classify activities
     
     ### TODO add classification again when fixed ###
     #data <- classify_activities(sequences, task)
+    data <- sequences
     
+    #browser()
     data <- data %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated") %>%  group_by(group_id) %>% do(sequence=select(., -c(group_id, content)))
+    #browser()
   } else {
     # empty sequence
   }
@@ -174,7 +177,7 @@ generateGroupTaskSequencesWithContent <- function(sequences, groupsAndUsers, tas
   # classify activities
   ### TODO add classification again when fixed ###
   #data <- classify_activities(sequences, task)
-  
+  data <- sequences
   
   data <- data %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated")  %>%  group_by(group_id) %>% do(sequence=select(., -c(group_id)))
   data
