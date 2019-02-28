@@ -26,8 +26,8 @@ groupsAndUsers <- getGroupsAndUsersForCourse(course, taskId)
 
 #work_imbalance <- calculateWorkImbalanceFun(groupTaskSequences, groupsAndUsers)
 
-#forum_sequences <- groupTaskSequences %>% filter(verb_id == "http://id.tincanapi.com/verb/replied")
-#wiki_sequences <- groupTaskSequences %>% filter(verb_id == "http://id.tincanapi.com/verb/updated")
+forum_sequences <- groupTaskSequences %>% filter(verb_id == "http://id.tincanapi.com/verb/replied")
+wiki_sequences <- groupTaskSequences %>% filter(verb_id == "http://id.tincanapi.com/verb/updated")
 
 #group_sequences <- groupTaskSequences %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated") %>%  group_by(group_id) %>% do(sequence=select(., -c(group_id, content)))
 group_sequences <- generateGroupTaskSequences( groupTaskSequences, groupsAndUsers, task)
@@ -38,38 +38,38 @@ wiki_wordcount <- calculateWikiWordcountFun(wiki_sequences, groupsAndUsers)
 ### !!! ###
 # ADD SELFASSESSMENT HERE AS WELL
 
-weighted_forum_wordcount <- getGroupWeightedForumWordcountAll(course, taskId, as.numeric(Sys.time()))
-weighted_wiki_wordcount <- getGroupWeightedWikiWordcountAll(course, taskId, as.numeric(Sys.time()))
+#weighted_forum_wordcount <- getGroupWeightedForumWordcountAll(course, taskId, as.numeric(Sys.time()))
+#weighted_wiki_wordcount <- getGroupWeightedWikiWordcountAll(course, taskId, as.numeric(Sys.time()))
 
 
-self_assessment <- getGroupSelfAssessmentsAll(course, taskId, as.numeric(Sys.time()))
+self_assessment <- getGroupSelfAssessmentsAll(course, taskId, as.numeric(Sys.time()), groupsAndUsers)
 
 # add check if a relevant activitiy occured (dim(gTS))
 # only then, calculate the values, otherwise call buildEmptyGroupModel with only task and group info
 
 model <- NULL
 
-if (dim(groupTaskSequences[1] == 0)) {
-  model <- buildEmptyGroupModel(course,
-                                task,
-                                groupsAndUsers)
-} else {
-  model <- buildGroupModel(course = course,
-                           #from = pFrom,
-                           #to = pTo,
-                           task = task,
-                           groups = groupsAndUsers,
-                           #average_latencies = groupLatencies,
-                           #work_imbalance = work_imbalance,
-                           #text_contribution_forum = forum_wordcount,
-                           #text_contribution_wiki = wiki_wordcount,
-                           
-                           weighted_forum_wordcount = weighted_forum_wordcount,
-                           weighted_wiki_wordcount = weighted_wiki_wordcount,
-                           self_assessment = self_assessment,
-                           
-                           group_sequences = group_sequences)
-}
+# if (dim(groupTaskSequences[1] == 0)) {
+#   model <- buildEmptyGroupModel(course,
+#                                 task,
+#                                 groupsAndUsers)
+# } else { }
+model <- buildGroupModel(course = course,
+                         #from = pFrom,
+                         #to = pTo,
+                         task = task,
+                         groups = groupsAndUsers,
+                         #average_latencies = groupLatencies,
+                         #work_imbalance = work_imbalance,
+                         weighted_forum_wordcount = forum_wordcount,
+                         weighted_wiki_wordcount = wiki_wordcount,
+                         
+                         #weighted_forum_wordcount = weighted_forum_wordcount,
+                         #weighted_wiki_wordcount = weighted_wiki_wordcount,
+                         self_assessment = self_assessment,
+                         
+                         group_sequences = group_sequences)
+
 
 # model <- buildGroupModel(course = course,
 #                 from = pFrom,
@@ -82,4 +82,6 @@ if (dim(groupTaskSequences[1] == 0)) {
 #                 text_contribution_wiki = wiki_wordcount,
 #                 group_sequences = group_sequences)
 
+print(model)
+  
 model %>% sendModelToXPS
