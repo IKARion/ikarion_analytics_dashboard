@@ -157,7 +157,9 @@ generateGroupTaskSequences <- function(sequences, groupsAndUsers, task) {
   
   if(dim(sequences)[1] > 0) {
     # classify activities
-    data <- classify_activities(sequences, task)
+    
+    ### TODO add classification again when fixed ###
+    #data <- classify_activities(sequences, task)
     
     data <- data %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated") %>%  group_by(group_id) %>% do(sequence=select(., -c(group_id, content)))
   } else {
@@ -170,7 +172,10 @@ generateGroupTaskSequences <- function(sequences, groupsAndUsers, task) {
 generateGroupTaskSequencesWithContent <- function(sequences, groupsAndUsers, task) {
   
   # classify activities
-  data <- classify_activities(sequences, task)
+  ### TODO add classification again when fixed ###
+  #data <- classify_activities(sequences, task)
+  
+  
   data <- data %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated")  %>%  group_by(group_id) %>% do(sequence=select(., -c(group_id)))
   data
 }
