@@ -71,7 +71,8 @@ ui <- dashboardPage(
                 box(
                   title = "Send group model to XPS",
                   selectInput("send_interval_GM", "Interval", c("once", "minute", "10 minutes", "hour")),
-                  actionButton("GM_to_XPS", "Send")
+                  actionButton("GM_to_XPS", "Send"),
+                  actionButton("Add_all_relevant_jobs",  "Add jobs for relevant tasks")
                 )
               ),
               groupLatencyUI("group_latencies")#,
@@ -127,52 +128,57 @@ server <- function(input, output, session) {
   groupSequences <- groupData$sequences
   groupTaskSequences <- groupData$taskSequences
   groupLatencies <- groupData$latencies
-  #groupSelfAssessments <- groupData$selfAssessments
-  #groupWeightedForumWordcount <- groupData$weightedForumWordcount
-  #groupWeightedWikiWordcount <- groupData$weightedWikiWordcount
   
   # TODO: use task context.
   createGroupModel <- reactive({
     
-    #browser()
-    
-    # dim(groupTaskSequences())[1]
-    # if dim = 0 buildEmptyGroupModel else buildGroupModel
-    
     model <- NULL
     
-    if (dim(groupTaskSequences())[1] == 0) {
-      # send empty group model with task and groups
-      model <- buildEmptyGroupModel(input$courses, 
-                                    selectedTask(),
-                                    getGroupsAndUsers()
-      )
-    } else {
-      # send normal group model with all additional info
-      model <- buildGroupModel(input$courses,
-                               #input$time_range[1],
-                               #input$time_range[2],
-                               selectedTask(),
-                               getGroupsAndUsers(), 
-                               # groupSelfAssessments(),
-                               # groupWeightedForumWordcount(),
-                               # groupWeightedWikiWordcount(),
-                               calculateGroupSelfAssessments(),
-                               calculateWeightedForumWordcount(),
-                               calculateWeightedWikiWordcount(),
-                               #getAllGroupLatencies(),
-                               #calculateWorkImbalance(),
-                               #(calculateForumWordcount(groupTaskSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/replied"))),
-                               #(calculateWikiWordcount(groupTaskSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/updated"))),
-                               #(groupTaskSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated") %>%  group_by(group_id) %>% do(sequence=select(., -c(group_id, content))))
-                               if(input$content == TRUE) {
-                                 generateGroupTaskSequencesWithContent(groupTaskSequences(), getGroupsAndUsers(), selectedTask())
-                               } else {
-                                 generateGroupTaskSequences(groupTaskSequences(), getGroupsAndUsers(), selectedTask())
-                               }
-                               # generateGroupTaskSequencesWithContent(groupTaskSequences(), getGroupsAndUsers())
-      )
-    }
+    # empty models no longer supported
+    # always send complete model with all values 0 if no rel. activity took place
+    
+    
+    # if (dim(groupTaskSequences())[1] == 0) {
+    #   # send empty group model with task and groups
+    #   model <- buildEmptyGroupModel(input$courses, 
+    #                                 selectedTask(),
+    #                                 getGroupsAndUsers()
+    #   )
+    # } else { }
+    
+    # send normal group model with all additional info
+    model <- buildGroupModel(input$courses,
+                             #input$time_range[1],
+                             #input$time_range[2],
+                             selectedTask(),
+                             getGroupsAndUsers(), 
+                             # groupSelfAssessments(),
+                             # groupWeightedForumWordcount(),
+                             # groupWeightedWikiWordcount(),
+                             calculateGroupSelfAssessments(),
+                             
+                             
+                             #calculateWeightedForumWordcount(),
+                             (calculateForumWordcount(groupTaskSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/replied"))),
+                             
+                             
+                             #calculateWeightedWikiWordcount(),
+                             (calculateWikiWordcount(groupTaskSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/updated"))),
+                             
+                             
+                             
+                             #getAllGroupLatencies(),
+                             #calculateWorkImbalance(),
+                             
+                             #(calculateWikiWordcount(groupTaskSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/updated"))),
+                             #(groupTaskSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated") %>%  group_by(group_id) %>% do(sequence=select(., -c(group_id, content))))
+                             if(input$content == TRUE) {
+                               generateGroupTaskSequencesWithContent(groupTaskSequences(), getGroupsAndUsers(), selectedTask())
+                             } else {
+                               generateGroupTaskSequences(groupTaskSequences(), getGroupsAndUsers(), selectedTask())
+                             }
+                             # generateGroupTaskSequencesWithContent(groupTaskSequences(), getGroupsAndUsers())
+    )
     
     
     
@@ -181,17 +187,17 @@ server <- function(input, output, session) {
   
   # necessary because getGroupSelfAssessmentsAll is also called in group_template.R in the backend (outside of the dashboard) 
   calculateGroupSelfAssessments <- function() {
-    data <- getGroupSelfAssessmentsAll(input$courses, input$group_tasks, as.numeric(Sys.time()))
+    data <- getGroupSelfAssessmentsAll(input$courses, input$group_tasks, as.numeric(Sys.time()), getGroupsAndUsers())
   }
   
   # necessary because getGroupWeightedForumWordcountAll is also called in group_template.R in the backend (outside of the dashboard) 
   calculateWeightedForumWordcount <- function() {
-    data <- getGroupWeightedForumWordcountAll(input$courses, input$group_tasks, as.numeric(Sys.time()))
+    data <- getGroupWeightedForumWordcountAll(input$courses, input$group_tasks, as.numeric(Sys.time()), getGroupsAndUsers())
   }
   
   # necessary because getGroupWeightedWikiWordcountAll is also called in group_template.R in the backend (outside of the dashboard) 
   calculateWeightedWikiWordcount <- function() {
-    data <- getGroupWeightedWikiWordcountAll(input$courses, input$group_tasks, as.numeric(Sys.time()))
+    data <- getGroupWeightedWikiWordcountAll(input$courses, input$group_tasks, as.numeric(Sys.time()), getGroupsAndUsers())
   }
   
   
@@ -215,10 +221,6 @@ server <- function(input, output, session) {
     data
   }
   
-  # output$GroupRepos <- DT::renderDataTable(
-  #   
-  #   getGroupRepositories()
-  # )
   
   output$downloadGM <- downloadHandler(
     filename = "group_model.json",
@@ -232,6 +234,29 @@ server <- function(input, output, session) {
     showNotification("Model successfully send to XPS.")
     callModule(modelsToXps, "xps")
   })
+  
+  observeEvent(input$Add_all_relevant_jobs, {
+    
+    #browser()
+    
+    # get all tasks
+    all_tasks <- getTaskListForCourse(input$courses)
+    
+    # get all jobs
+    scheduled_tasks <- getScheduledTasks()
+    
+    # generate list of relevant task without job
+    
+    
+    # add job for each relevant task
+    
+    
+    createGroupModel() %>% addScheduledTask(input$send_interval_GM, "script_templates/group_template.R", "group_model")
+    showNotification("Model successfully send to XPS.")
+    callModule(modelsToXps, "xps")
+  })
+  
+  
   
   
   ################
