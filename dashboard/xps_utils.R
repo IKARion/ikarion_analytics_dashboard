@@ -33,15 +33,137 @@ buildCustomScript <- function(model, scriptTemplate) {
     append(readLines(scriptTemplate)) 
 }
 
+getGroupSelfAssessmentsAll <- function(courseId, taskId, timestamp, groupsAndUsers) {
+
+  final_data <- NULL
+  
+  # get data
+  courseId <- replaceUrlChars(courseId)
+  
+  # uncomment when endpoint is implemented  
+  # getGroupListForTask(courseId, taskId) %>%
+  #   rowwise %>%
+  #   do(getGroupSelfAssessments(courseId, .$group, taskId, timestamp))
+  
+  
+  # insert dummy data
+  #data <- dummy_SA_T1
+  data <- data.frame()
+  #data <- dummy_EM3_T1
+  
+  
+  # construct complete dataset for all users with 0 values
+  
+  all_users <- unnest(groupsAndUsers)
+  if ("name" %in% names(all_users)) {
+    colnames(all_users)[which(names(all_users) == "name")] <- "user_id"
+  } else {
+    colnames(all_users)[which(names(all_users) == "fullname")] <- "user_id"
+  }
+  
+  all_users <- all_users %>%
+    select(c(group_id, user_id)) %>% 
+    mutate(item1 = 0) %>% 
+    mutate(item2 = 0) %>% 
+    mutate(item3 = 0)
+  
+  if(nrow(data) > 0) {
+    
+    # deselect timestamps
+    data <- data %>%
+      subset(select = -timestamp)
+
+    missing <- anti_join(all_users, data, by = c("group_id", "user_id"))
+
+    ## calculate new value for forum wordcount
+    # defined as the share of words a users has written in comparison to all words written by all group members in the forum
+
+    complete_data <- full_join(missing, data) 
+
+    #browser()
+
+    final_data <- complete_data %>%
+      group_by(group_id) %>%
+      do(group_members=select(., -c(group_id)))
+
+    #browser()
+    
+  } else {
+    
+    # data with all inactive users
+    final_data <- all_users %>% 
+      group_by(group_id) %>% 
+      do(group_members=select(., -group_id)) 
+  }
+  
+  # join dataframe with real data and missing data
+  
+  
+  
+  # bring data in correct format: ("group_members", ...)
+  # data <- dummy_SA_T1 %>% 
+  #   group_by(group_id) %>% 
+  #   do(group_members = select(., -c(group_id, timestamp)))
+  
+  
+  
+  final_data
+}
+
+getGroupWeightedForumWordcountAll <- function(courseId, taskId, timestamp, groupsAndUsers) {
+  courseId <- replaceUrlChars(courseId)
+  
+  # uncomment when endpoint is implemented  
+  # getGroupListForTask(courseId, taskId) %>%
+  #   rowwise %>%
+  #   do(getGroupWeightedForumWordcount(courseId, .$group, taskId, timestamp))
+  
+  # insert dummy data
+  
+  data <- dummy_WFW_T1 %>% 
+    group_by(group_id) %>%
+    do(group_members = select(., -c(group_id, timestamp)))
+  
+  # TODO add users with forum wordcount = 0 if backend does not give complete list with inactive users
+  
+  
+  data
+  
+}
+
+getGroupWeightedWikiWordcountAll <- function(courseId, taskId, timestamp, groupsAndUsers) {
+  courseId <- replaceUrlChars(courseId)
+  
+  # uncomment when endpoint is implemented  
+  # getGroupListForTask(courseId, taskId) %>%
+  #   rowwise %>%
+  #   do(getGroupWeightedWikiWordcount(courseId, .$group, taskId, timestamp))
+  
+  # insert dummy data
+  data <- dummy_WWW_T1 %>% 
+    group_by(group_id) %>%
+    do(group_members = select(., -c(group_id, timestamp)))
+  
+  # TODO add users with wiki wordcount = 0 if backend does not give complete list with inactive users
+  
+  
+  data
+  
+}
+
 generateGroupTaskSequences <- function(sequences, groupsAndUsers, task) {
   
+  data <- data.frame()
   
-  ## HERE check that features are filtered
+  if(dim(sequences)[1] > 0) {
+    # classify activities
+    data <- classify_activities(sequences, task)
+    
+    data <- data %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated") %>%  group_by(group_id) %>% do(sequence=select(., -c(group_id, content)))
+  } else {
+    # empty sequence
+  }
   
-  # classify activities
-  data <- classify_activities(sequences, task)
-  
-  data <- data %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated") %>%  group_by(group_id) %>% do(sequence=select(., -c(group_id, content)))
   data
 }
 
@@ -172,10 +294,6 @@ classify_activities <- function(data, task) {
   
   forum_and_start$wordcount <- as.numeric(forum_and_start$wordcount)
   wiki$wordcount <- as.numeric(wiki$wordcount)
-  
-  
-  typeof(forum_and_start$wordcount)
-  typeof(wiki$wordcount)
   
   #all_data <- rbind(forum, etherpad)
   all_data <- bind_rows(forum_and_start, wiki) %>% 
@@ -366,11 +484,20 @@ calculateForumWordcountFun <- function(df, groupsAndUsers) {
     
     missing <- anti_join(all_users, data, by = c("group_id", "user_id"))
     
-    complete_data <- full_join(missing, data)
+    
+    ## calculate new value for forum wordcount
+    # defined as the share of words a users has written in comparison to all words written by all group members in the forum
+    
+    complete_data <- full_join(missing, data) %>% 
+      group_by(group_id) %>% 
+      mutate(group_wordcount = sum(user_wordcount)) %>% 
+      mutate(weighted_forum_wordcount = user_wordcount / group_wordcount)
+    
+    complete_data$weighted_forum_wordcount[is.nan(complete_data$weighted_forum_wordcount)] <- 0
     
     final_data <- complete_data %>% 
       group_by(group_id) %>% 
-      do(group_members=select(., -group_id))  
+      do(group_members=select(., -c(group_id, user_wordcount, group_wordcount)))  
     
   } else {
     
@@ -442,12 +569,17 @@ calculateWikiWordcountFun <- function(df, groupsAndUsers) {
     
     missing <- anti_join(all_users, sum_wordcounts, by = c("group_id", "user_id"))
     
-    complete_data <- full_join(missing, sum_wordcounts)
+    complete_data <- full_join(missing, sum_wordcounts) %>% 
+      group_by(group_id) %>% 
+      mutate(group_wordcount = sum(user_wordcount)) %>% 
+      mutate(weighted_wiki_wordcount = user_wordcount / group_wordcount)
+    
+    complete_data$weighted_wiki_wordcount[is.nan(complete_data$weighted_wiki_wordcount)] <- 0
     
     # format according to model specification
     final_data <- complete_data %>% 
       group_by(group_id) %>% 
-      do(group_members=select(., -group_id))
+      do(group_members=select(., -c(group_id, user_wordcount, group_wordcount)))
     
   } else {
     
@@ -512,8 +644,6 @@ buildGroupModel <- function(course,
                             #text_contribution_wiki, 
                             group_sequences) {  
   
-  #browser()
-  
   model <- list(
     model_metadata=list(
       course_id=course, 
@@ -541,38 +671,8 @@ buildGroupModel <- function(course,
   model
 }
 
-
-#***
-buildGroupModel2 <- function(course, from, to, task, groups, work_imbalance, text_contribution_forum, text_contribution_wiki, group_sequences) {  
-  
-  #browser()
-  
-  model <- list(
-    model_metadata=list(
-      course_id=course, 
-      period_from=from,
-      period_to=to,
-      task_context=list(task),
-      groups = groups
-    ),
-    
-    # latency list with all groups, forum inative groups have a latency of 0
-    #average_latencies=average_latencies,
-    
-    #self_assessment = self_assessment,
-    work_imbalance = work_imbalance,
-    text_contributions_forum = text_contribution_forum,
-    text_contributions_wiki = text_contribution_wiki,
-    # group TASK sequences containing relavant activities
-    # USE THIS for current group model specification
-    group_sequences=group_sequences
-  )
-  
-  model
-}
-#***
-
 # send empty group model that only contains the task and groups before a relevant activity occured
+# no longer used, since according to the specification "empty" models should also contain all fields (with values = 0)
 buildEmptyGroupModel <- function(course, task, groups) {  
   model <- list(
     model_metadata=list(
