@@ -72,3 +72,8 @@ if (!require(caret)) {
   install.packages("caret")
   require(caret)
 }
+
+if (!require(e1071)) {
+  install.packages("e1071")
+  require(e1071)
+}
