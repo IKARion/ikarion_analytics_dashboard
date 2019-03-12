@@ -67,3 +67,8 @@ if (!require(schoolmath)) {
   install.packages("schoolmath")
   require(schoolmath)
 }
+
+if (!require(caret)) {
+  install.packages("caret")
+  require(caret)
+}
