@@ -77,3 +77,8 @@ if (!require(e1071)) {
   install.packages("e1071")
   require(e1071)
 }
+
+if (!require(ranger)) {
+  install.packages("ranger")
+  require(ranger)
+}
