@@ -159,8 +159,8 @@ generateGroupTaskSequences <- function(sequences, groupsAndUsers, task) {
     # classify activities
     
     ### TODO add classification again when fixed ###
-    #data <- classify_activities(sequences, task)
-    data <- sequences
+    data <- classify_activities(sequences, task)
+    # data <- sequences
     
     #browser()
     data <- data %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated") %>%  group_by(group_id) %>% do(sequence=select(., -c(group_id, content)))
@@ -168,7 +168,7 @@ generateGroupTaskSequences <- function(sequences, groupsAndUsers, task) {
   } else {
     # empty sequence
   }
-  
+
   data
 }
 
