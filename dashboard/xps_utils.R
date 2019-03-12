@@ -318,9 +318,6 @@ classify_activities <- function(data, task) {
   
   all_data_without_start$type <- as.factor(all_data_without_start$type)
   
-  print(classification_model)
-  #browser()
-  
   predicted_classes <- predict(classification_model, all_data_without_start)
   all_data_without_start$class <- predicted_classes
 
