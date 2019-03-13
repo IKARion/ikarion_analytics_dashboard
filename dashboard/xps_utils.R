@@ -375,12 +375,11 @@ calculateWorkImbalanceFun <- function(groupTaskSequences, groupsAndUsers) {
     merge <- full_join(forum_data, wiki_data) %>%
       replace_na(list(user_forum_wordcount = 0, user_wiki_wordcount = 0))
   } else  {
-    
+    merge <- all_users
     # no activity at all
     # only possible if groups are logged on group creation without user activity
-    print("no wiki or forum activity logged")
   }
-  
+
   
   # add all inactive users to the data
   
@@ -403,6 +402,7 @@ calculateWorkImbalanceFun <- function(groupTaskSequences, groupsAndUsers) {
   gini_data[is.nan(gini_data)] <- 0
   
   gini_data
+  
 }
 
 ## change function 
@@ -510,6 +510,12 @@ calculateForumWordcountFun <- function(df, groupsAndUsers) {
   } else {
     
     # data with all inactive users
+    
+    all_users <- all_users %>% 
+      mutate(weighted_forum_wordcount = 0) %>% 
+      subset(select = -user_wordcount)
+    
+    
     final_data <- all_users %>% 
       group_by(group_id) %>% 
       do(group_members=select(., -group_id)) 
@@ -592,6 +598,12 @@ calculateWikiWordcountFun <- function(df, groupsAndUsers) {
   } else {
     
     # data with all inactive users
+    
+    all_users <- all_users %>% 
+      mutate(weighted_wiki_wordcount = 0) %>% 
+      subset(select = -user_wordcount)
+    
+    
     final_data <- all_users %>% 
       group_by(group_id) %>% 
       do(group_members=select(., -group_id))
@@ -644,6 +656,7 @@ buildGroupModel <- function(course,
                             #to, 
                             task, 
                             groups, 
+                            work_imbalance,
                             self_assessment, 
                             weighted_forum_wordcount, 
                             weighted_wiki_wordcount, 
@@ -657,9 +670,11 @@ buildGroupModel <- function(course,
       course_id=course, 
       #period_from=from,
       #period_to=to,
-      task_context=list(task),
+      task_context=task,
       groups = groups
     ),
+    
+    work_imbalance = work_imbalance,
     
     # latency list with all groups, forum inative groups have a latency of 0
     #average_latencies=average_latencies,
@@ -668,7 +683,6 @@ buildGroupModel <- function(course,
     weighted_wiki_wordcount = weighted_wiki_wordcount,
     self_assessment = self_assessment,
     
-    #work_imbalance = work_imbalance,
     #text_contributions_forum = text_contribution_forum,
     #text_contributions_wiki = text_contribution_wiki,
     # group TASK sequences containing relavant activities
