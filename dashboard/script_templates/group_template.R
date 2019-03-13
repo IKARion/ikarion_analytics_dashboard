@@ -85,6 +85,6 @@ model <- buildGroupModel(course = course,
 #                 text_contribution_wiki = wiki_wordcount,
 #                 group_sequences = group_sequences)
 
-print(model)
+print(toJSON(model))
   
 model %>% sendModelToXPS
