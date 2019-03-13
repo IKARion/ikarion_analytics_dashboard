@@ -27,8 +27,8 @@ buildCustomScript <- function(model, scriptTemplate) {
   
   c(paste("setwd('", getwd(), "')", sep=""),
     paste("course <- '", model$model_metadata$course_id, "'", sep=""),
-    paste("pFrom <- '", model$model_metadata$period_from, "'", sep=""),
-    paste("pTo <- '", model$model_metadata$period_to, "'", sep=""),
+    #paste("pFrom <- '", model$model_metadata$period_from, "'", sep=""),
+    #paste("pTo <- '", model$model_metadata$period_to, "'", sep=""),
     paste("taskId <- '", model$model_metadata$task_context[[1]]$task_id, "'", sep=""))  %>%
     append(readLines(scriptTemplate)) 
 }
