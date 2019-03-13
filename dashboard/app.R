@@ -152,6 +152,8 @@ server <- function(input, output, session) {
                              #input$time_range[2],
                              selectedTask(),
                              getGroupsAndUsers(), 
+                             
+                             calculateWorkImbalance(),
                              # groupSelfAssessments(),
                              # groupWeightedForumWordcount(),
                              # groupWeightedWikiWordcount(),
@@ -165,10 +167,9 @@ server <- function(input, output, session) {
                              #calculateWeightedWikiWordcount(),
                              (calculateWikiWordcount(groupTaskSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/updated"))),
                              
-                             
-                             
+
                              #getAllGroupLatencies(),
-                             #calculateWorkImbalance(),
+                    
                              
                              #(calculateWikiWordcount(groupTaskSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/updated"))),
                              #(groupTaskSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated") %>%  group_by(group_id) %>% do(sequence=select(., -c(group_id, content))))
