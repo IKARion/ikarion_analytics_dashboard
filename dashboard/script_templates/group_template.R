@@ -24,7 +24,7 @@ groupsAndUsers <- getGroupsAndUsersForCourse(course, taskId)
 # include forum inactive groups in the latencies with latency = 0
 # latencies <-getAllLatenciesFun(groupLatencies, groupsAndUsers)
 
-#work_imbalance <- calculateWorkImbalanceFun(groupTaskSequences, groupsAndUsers)
+work_imbalance <- calculateWorkImbalanceFun(groupTaskSequences, groupsAndUsers)
 
 forum_sequences <- groupTaskSequences %>% filter(verb_id == "http://id.tincanapi.com/verb/replied")
 wiki_sequences <- groupTaskSequences %>% filter(verb_id == "http://id.tincanapi.com/verb/updated")
@@ -60,13 +60,16 @@ model <- buildGroupModel(course = course,
                          task = task,
                          groups = groupsAndUsers,
                          #average_latencies = groupLatencies,
-                         #work_imbalance = work_imbalance,
+                         work_imbalance = work_imbalance,
+                         
+                         self_assessment = self_assessment,
+                        
                          weighted_forum_wordcount = forum_wordcount,
                          weighted_wiki_wordcount = wiki_wordcount,
                          
                          #weighted_forum_wordcount = weighted_forum_wordcount,
                          #weighted_wiki_wordcount = weighted_wiki_wordcount,
-                         self_assessment = self_assessment,
+                         
                          
                          group_sequences = group_sequences)
 
