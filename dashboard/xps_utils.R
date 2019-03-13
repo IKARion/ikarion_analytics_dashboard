@@ -29,8 +29,9 @@ buildCustomScript <- function(model, scriptTemplate) {
     paste("course <- '", model$model_metadata$course_id, "'", sep=""),
     #paste("pFrom <- '", model$model_metadata$period_from, "'", sep=""),
     #paste("pTo <- '", model$model_metadata$period_to, "'", sep=""),
-    paste("taskId <- '", model$model_metadata$task_context[[1]]$task_id, "'", sep=""))  %>%
+    paste("taskId <- '", model$model_metadata$task_context$task_id, "'", sep=""))  %>%
     append(readLines(scriptTemplate)) 
+  
 }
 
 getGroupSelfAssessmentsAll <- function(courseId, taskId, timestamp, groupsAndUsers) {
@@ -708,7 +709,8 @@ buildEmptyGroupModel <- function(course, task, groups) {
 }
 
 addScheduledTask <- function(model, interval, scriptTemplate, label) {
-
+  
+  
   sendModelToXPS(model)
   
   if (interval %in% c("minute", "10 minutes", "hour")) {
@@ -719,6 +721,7 @@ addScheduledTask <- function(model, interval, scriptTemplate, label) {
     if (interval == "hour") {
       frequencyMinutes <- 60
     }
+    
     filename <- digest(model$model_metadata) # hash of metadata becomes filename to avoid duplicates.
     buildCustomScript(model, scriptTemplate) %>%
       print() %>% 
