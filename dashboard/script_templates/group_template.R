@@ -4,8 +4,8 @@ source("data_utils.R")
 
 # inputs:
 # paste("course <- '", model$model_metadata$course_id, "'", sep=""),
-# paste("pFrom <- '", model$model_metadata$period_from, "'", sep=""),
-# paste("pTo <- '", model$model_metadata$period_to, "'", sep=""),
+# paste("pFrom <- '", model$model_metadata$period_from, "'", sep=""), # !!deleted
+# paste("pTo <- '", model$model_metadata$period_to, "'", sep=""),     # !!deleted
 # paste("taskId <- '", model$model_metadata$task_context$task_id, "'", sep=""))
 
 
