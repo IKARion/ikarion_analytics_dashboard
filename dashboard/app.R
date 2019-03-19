@@ -231,6 +231,7 @@ server <- function(input, output, session) {
   )
   
   observeEvent(input$GM_to_XPS, {
+    
     createGroupModel() %>% addScheduledTask(input$send_interval_GM, "script_templates/group_template.R", "group_model")
     showNotification("Model successfully send to XPS.")
     callModule(modelsToXps, "xps")
@@ -238,7 +239,6 @@ server <- function(input, output, session) {
   
   observeEvent(input$Add_all_relevant_jobs, {
     
-    #browser()
     
     # get all tasks
     all_tasks <- getTaskListForCourse(input$courses)
