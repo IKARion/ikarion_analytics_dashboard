@@ -94,10 +94,15 @@ getActiveDaysUser <- function(userId, courseId) {
 
   courseId <- replaceUrlChars(courseId)
   
+  
+  ##TODO removed because of changes in the backend
   data_frame(
     #user=substring(digest::sha1(userId),1,8), activeDay=getData("user_model/active_days", userId, courseId)
     user=userId, activeDay=getData("user_model/active_days", userId, courseId)
   )
+
+  
+  
 }
 
 getActiveDaysAll <- function(courseId) {
@@ -135,8 +140,17 @@ getGroupTaskSequence <- function(courseId, groupId, taskId) {
 getGroupSelfAssessments <- function(courseId, groupId, taskId, timestamp) {
   courseId <- replaceUrlChars(courseId)
   
-  data <- getData("groups/group_self_assessment", courseId, groupId, taskId, timestamp) %>% as_data_frame()
+  data <- getData("groups/group_self_assessment", courseId, groupId, taskId) %>% as_data_frame()
   
+  # create dataframe with groupid, userid, ...
+  data$item1 <- as.numeric(data$item1)
+  data$item2 <- as.numeric(data$item2)
+  data$item3 <- as.numeric(data$item3)
+  
+  return(data)
+  
+  # default for no timestamp given in backend: "timestamp": "2147483648"
+  #data <- getData("groups/group_self_assessment", courseId, groupId, taskId, timestamp) %>% as_data_frame()
   
   # courseId <- replaceUrlChars(courseId)
   # data <- getData("groups/grouptask_activities", courseId, groupId, taskId) %>% as_data_frame
