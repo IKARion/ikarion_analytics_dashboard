@@ -41,15 +41,15 @@ getGroupSelfAssessmentsAll <- function(courseId, taskId, timestamp, groupsAndUse
   # get data
   courseId <- replaceUrlChars(courseId)
   
-  # uncomment when endpoint is implemented  
-  # getGroupListForTask(courseId, taskId) %>%
-  #   rowwise %>%
-  #   do(getGroupSelfAssessments(courseId, .$group, taskId, timestamp))
+  #uncomment when endpoint is implemented
+  data <- getGroupListForTask(courseId, taskId) %>%
+    rowwise %>%
+    do(getGroupSelfAssessments(courseId, .$group, taskId, timestamp))
   
   
   # insert dummy data
   #data <- dummy_SA_T1
-  data <- data.frame()
+  #data <- data.frame()
   #data <- dummy_EM3_T1
   
   
@@ -81,13 +81,9 @@ getGroupSelfAssessmentsAll <- function(courseId, taskId, timestamp, groupsAndUse
 
     complete_data <- full_join(missing, data) 
 
-    #browser()
-
     final_data <- complete_data %>%
       group_by(group_id) %>%
       do(group_members=select(., -c(group_id)))
-
-    #browser()
     
   } else {
     
@@ -105,7 +101,6 @@ getGroupSelfAssessmentsAll <- function(courseId, taskId, timestamp, groupsAndUse
   # data <- dummy_SA_T1 %>% 
   #   group_by(group_id) %>% 
   #   do(group_members = select(., -c(group_id, timestamp)))
-  
   
   
   final_data
@@ -155,7 +150,6 @@ getGroupWeightedWikiWordcountAll <- function(courseId, taskId, timestamp, groups
 generateGroupTaskSequences <- function(sequences, groupsAndUsers, task) {
   
   data <- data.frame()
-  #browser()
   if(dim(sequences)[1] > 0) {
     # classify activities
     
@@ -163,9 +157,7 @@ generateGroupTaskSequences <- function(sequences, groupsAndUsers, task) {
     data <- classify_activities(sequences, task)
     # data <- sequences
     
-    #browser()
     data <- data %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated") %>%  group_by(group_id) %>% do(sequence=select(., -c(group_id, content)))
-    #browser()
   } else {
     # empty sequence
   }
