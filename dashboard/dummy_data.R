@@ -8,6 +8,6 @@ dummy_WWW_T1 <- data.frame("group_id" = c("305","305","304","304"), "timestamp" 
 #***
 dummy_EM3_T1 <- data.frame("group_id" = c("315","315"), "timestamp" = c(1548025051, 1548024981), "user_id" = c("wdqshw4nFEYjiBA+UokJ5w==", "nlrrOSj7CO4Pk21IIcDnog=="), "item1" = c(1,3), "item2" = c(4,2), "item3" = c(0,3))
 
-print(toJSON(dummy_EM3_T1))
+#print(toJSON(dummy_EM3_T1))
 
 
