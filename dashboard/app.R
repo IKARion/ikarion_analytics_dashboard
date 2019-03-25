@@ -189,6 +189,7 @@ server <- function(input, output, session) {
   # necessary because getGroupSelfAssessmentsAll is also called in group_template.R in the backend (outside of the dashboard) 
   calculateGroupSelfAssessments <- function() {
     data <- getGroupSelfAssessmentsAll(input$courses, input$group_tasks, as.numeric(Sys.time()), getGroupsAndUsers())
+
   }
   
   # necessary because getGroupWeightedForumWordcountAll is also called in group_template.R in the backend (outside of the dashboard) 
