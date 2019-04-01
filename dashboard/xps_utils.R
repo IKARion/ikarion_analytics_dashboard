@@ -129,16 +129,21 @@ getGroupWeightedForumWordcountAll <- function(courseId, taskId, timestamp, group
 
 getGroupWeightedWikiWordcountAll <- function(courseId, taskId, timestamp, groupsAndUsers) {
   courseId <- replaceUrlChars(courseId)
-  
   # uncomment when endpoint is implemented  
-  # getGroupListForTask(courseId, taskId) %>%
-  #   rowwise %>%
-  #   do(getGroupWeightedWikiWordcount(courseId, .$group, taskId, timestamp))
+  data <- getGroupListForTask(courseId, taskId) %>%
+    rowwise %>%
+    do(getGroupWeightedWikiWordcount(courseId, .$group, taskId, timestamp))
   
-  # insert dummy data
-  data <- dummy_WWW_T1 %>% 
-    group_by(group_id) %>%
-    do(group_members = select(., -c(group_id, timestamp)))
+  names(data)[names(data) == 'user'] <- 'user_id'
+  
+  data <- data %>% 
+    group_by(group_id) %>% 
+    do(group_members=select(., -group_id)) 
+  
+  # # insert dummy data
+  # data <- dummy_WWW_T1 %>% 
+  #   group_by(group_id) %>%
+  #   do(group_members = select(., -c(group_id, timestamp)))
   
   # TODO add users with wiki wordcount = 0 if backend does not give complete list with inactive users
   
@@ -358,7 +363,7 @@ calculateWorkImbalanceFun <- function(groupTaskSequences, groupsAndUsers) {
     merge <- forum_data %>%
       mutate(user_wiki_wordcount = 0)
     
-    # only activity in wiki
+    # only activity in wiki 
   } else if (!is.null(wiki_data) & is.null(forum_data)) {
     merge <- wiki_data %>%
       mutate(user_forum_wordcount = 0)
@@ -580,6 +585,8 @@ calculateWikiWordcountFun <- function(df, groupsAndUsers) {
       group_by(group_id) %>% 
       mutate(group_wordcount = sum(user_wordcount)) %>% 
       mutate(weighted_wiki_wordcount = user_wordcount / group_wordcount)
+    
+    #browser()
     
     complete_data$weighted_wiki_wordcount[is.nan(complete_data$weighted_wiki_wordcount)] <- 0
     
