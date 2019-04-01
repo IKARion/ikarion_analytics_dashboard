@@ -172,7 +172,7 @@ getGroupWeightedForumWordcount <- function(courseId, groupId, taskId, timestamp)
 getGroupWeightedWikiWordcount <- function(courseId, groupId, taskId, timestamp) {
   courseId <- replaceUrlChars(courseId)
   
-  data <- getData("groups/weighted_wiki_wordcount", courseId, groupId, taskId, timestamp) %>% as_data_frame()
+  data <- getData("groups/weighted_wiki_wordcount", courseId, groupId, taskId) %>% as_data_frame()
 }
 
 getGroupRepositories <- function() {
