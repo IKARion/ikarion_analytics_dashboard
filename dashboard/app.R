@@ -164,8 +164,8 @@ server <- function(input, output, session) {
                              (calculateForumWordcount(groupTaskSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/replied"))),
                              
                              
-                             #calculateWeightedWikiWordcount(),
-                             (calculateWikiWordcount(groupTaskSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/updated"))),
+                             calculateWeightedWikiWordcount(),
+                             #(calculateWikiWordcount(groupTaskSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/updated"))),
                              
 
                              #getAllGroupLatencies(),
