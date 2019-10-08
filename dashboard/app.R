@@ -44,7 +44,14 @@ ui <- dashboardPage(
       menuItem("User Models", tabName = "user_model", icon = icon("dashboard")),
       menuItem("Group Models", tabName = "group_model", icon = icon("dashboard")),
       checkboxInput("content", "include \"content\"", value = FALSE),
+      #checkboxInput("simple_word_count", "include \"simple word count\"", value = T),
+      #checkboxInput("semantic_word_count", "include \"semantic word count\"", value = F),
       #checkboxInput("req_answer", "include \"requires_answer\"", value = FALSE),
+      radioButtons("word_count_type", "Choose type", choices = c("simple word count", "semantic word count"), selected = "simple word count",
+                   inline = FALSE, width = NULL, choiceNames = NULL,
+                   choiceValues = NULL),
+      
+      
       menuItem("XPS", tabName = "xps", icon = icon("calendar"))
     )
   ),
@@ -159,12 +166,20 @@ server <- function(input, output, session) {
                              # groupWeightedWikiWordcount(),
                              calculateGroupSelfAssessments(),
                              
+                            
+                             
                              
                              #calculateWeightedForumWordcount(),
                              (calculateForumWordcount(groupTaskSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/replied"))),
                              
+                             # check for simple or sematic wordcount and generate data accordingly
+                             if (input$word_count_type == "simple word count") {
+                               (calculateWikiWordcount(groupTaskSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/updated")))
+                             } else if (input$word_count_type == "semantic word count") {
+                               calculateWeightedWikiWordcount()
+                             },
                              
-                             calculateWeightedWikiWordcount(),
+                             #calculateWeightedWikiWordcount(),
                              #(calculateWikiWordcount(groupTaskSequences() %>% filter(verb_id == "http://id.tincanapi.com/verb/updated"))),
                              
 
@@ -233,7 +248,7 @@ server <- function(input, output, session) {
   
   observeEvent(input$GM_to_XPS, {
     
-    createGroupModel() %>% addScheduledTask(input$send_interval_GM, "script_templates/group_template.R", "group_model")
+    createGroupModel() %>% addScheduledTask(input$send_interval_GM, input$word_count_type, "script_templates/group_template.R", "group_model")
     showNotification("Model successfully send to XPS.")
     callModule(modelsToXps, "xps")
   })
