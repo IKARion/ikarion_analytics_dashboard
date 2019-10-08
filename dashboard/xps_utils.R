@@ -479,39 +479,49 @@ calculateForumWordcountFun <- function(df, groupsAndUsers) {
   
   all_users <- all_users %>%
     select(c(group_id, user_id)) %>% 
-    mutate(user_wordcount = 0)
+    #mutate(user_wordcount = 0)
+    mutate(weighted_forum_wordcount = 0)
   
   if(nrow(df) > 0) {
     data <- df %>% mutate(charcount = nchar(htmlTagClean(content))) %>% 
       mutate(wordcount = wordcount(htmlTagClean(content))) %>% 
       group_by(group_id) %>% 
       group_by(user_id, add = T) %>% 
-      summarise(user_wordcount = sum(wordcount))
+      summarise(weighted_forum_wordcount = sum(wordcount))
+      #summarise(user_wordcount = sum(wordcount))
     
     missing <- anti_join(all_users, data, by = c("group_id", "user_id"))
     
+    complete_data <- full_join(missing, data)
     
+    
+    ###                 ***                   ###
+    # uncomment this part to give wordcount as share of overall wordcount (between 0 and 1)
     ## calculate new value for forum wordcount
     # defined as the share of words a users has written in comparison to all words written by all group members in the forum
     
-    complete_data <- full_join(missing, data) %>% 
-      group_by(group_id) %>% 
-      mutate(group_wordcount = sum(user_wordcount)) %>% 
-      mutate(weighted_forum_wordcount = user_wordcount / group_wordcount)
+    # complete_data <- full_join(missing, data) %>% 
+    #   group_by(group_id) %>% 
+    #   mutate(group_wordcount = sum(user_wordcount)) %>% 
+    #   mutate(weighted_forum_wordcount = user_wordcount / group_wordcount)
+    # 
+    # complete_data$weighted_forum_wordcount[is.nan(complete_data$weighted_forum_wordcount)] <- 0
+    ###                 ***                   ###
     
-    complete_data$weighted_forum_wordcount[is.nan(complete_data$weighted_forum_wordcount)] <- 0
     
     final_data <- complete_data %>% 
       group_by(group_id) %>% 
-      do(group_members=select(., -c(group_id, user_wordcount, group_wordcount)))  
+      #do(group_members=select(., -c(group_id, user_wordcount, group_wordcount)))  
+      do(group_members=select(., -c(group_id)))  
+    
     
   } else {
     
     # data with all inactive users
     
     all_users <- all_users %>% 
-      mutate(weighted_forum_wordcount = 0) %>% 
-      subset(select = -user_wordcount)
+      mutate(weighted_forum_wordcount = 0) #%>% 
+      #subset(select = -user_wordcount)
     
     
     final_data <- all_users %>% 
@@ -554,7 +564,8 @@ calculateWikiWordcountFun <- function(df, groupsAndUsers) {
   
   all_users <- all_users %>%
     select(c(group_id, user_id)) %>% 
-    mutate(user_wordcount = 0)
+    #mutate(user_wordcount = 0)
+    mutate(weighted_wiki_wordcount = 0)
   
   if (nrow(df) > 0) {
     data <- df %>% 
@@ -577,31 +588,38 @@ calculateWikiWordcountFun <- function(df, groupsAndUsers) {
     sum_wordcounts <- data %>% 
       group_by(group_id) %>% 
       group_by(user_id, add = T) %>% 
-      summarise(user_wordcount = sum(textchange))
+      # here used to be user_wordcount
+      summarise(weighted_wiki_wordcount = sum(textchange))
     
     missing <- anti_join(all_users, sum_wordcounts, by = c("group_id", "user_id"))
     
-    complete_data <- full_join(missing, sum_wordcounts) %>% 
-      group_by(group_id) %>% 
-      mutate(group_wordcount = sum(user_wordcount)) %>% 
-      mutate(weighted_wiki_wordcount = user_wordcount / group_wordcount)
+    ###                 ***                   ###
+    # uncomment this part to give wordcount as share of overall wordcount (between 0 and 1)
+    # 
+    # complete_data <- full_join(missing, sum_wordcounts) %>% 
+    #   group_by(group_id) %>% 
+    #   mutate(group_wordcount = sum(user_wordcount)) %>% 
+    #   mutate(weighted_wiki_wordcount = user_wordcount / group_wordcount)
+    # 
+    ###                 ***                   ###
     
-    #browser()
+    complete_data <- full_join(missing, sum_wordcounts)
     
     complete_data$weighted_wiki_wordcount[is.nan(complete_data$weighted_wiki_wordcount)] <- 0
     
     # format according to model specification
     final_data <- complete_data %>% 
       group_by(group_id) %>% 
-      do(group_members=select(., -c(group_id, user_wordcount, group_wordcount)))
+      #do(group_members=select(., -c(group_id, user_wordcount, group_wordcount)))
+      do(group_members=select(., -c(group_id)))
     
   } else {
     
     # data with all inactive users
     
     all_users <- all_users %>% 
-      mutate(weighted_wiki_wordcount = 0) %>% 
-      subset(select = -user_wordcount)
+      mutate(weighted_wiki_wordcount = 0) #%>% 
+      #subset(select = -user_wordcount)
     
     
     final_data <- all_users %>% 
@@ -707,11 +725,13 @@ buildEmptyGroupModel <- function(course, task, groups) {
   model
 }
 
-addScheduledTask <- function(model, interval, scriptTemplate, label) {
+addScheduledTask <- function(model, interval, word_count_type, scriptTemplate, label) {
+  
+  print(word_count_type)
   
   
   sendModelToXPS(model)
-  
+
   if (interval %in% c("minute", "10 minutes", "hour")) {
     frequencyMinutes <- 1
     if (interval == "10 minutes") {
@@ -720,18 +740,18 @@ addScheduledTask <- function(model, interval, scriptTemplate, label) {
     if (interval == "hour") {
       frequencyMinutes <- 60
     }
-    
+
     filename <- digest(model$model_metadata) # hash of metadata becomes filename to avoid duplicates.
     buildCustomScript(model, scriptTemplate) %>%
-      print() %>% 
+      print() %>%
       writeLines(filename)
 
-    
+
     description <- c(label, as.character(model$model_metadata)) %>%
       paste(collapse="\n")
     uri <- tools::file_path_as_absolute(filename)
-    
-    paste(managementEndpoint, "add_r_script", replaceUrlChars(description), frequencyMinutes, 
+
+    paste(managementEndpoint, "add_r_script", replaceUrlChars(description), frequencyMinutes,
           replaceUrlChars(uri), sep="/") %>% URLencode %>% GET
   }
 }
@@ -747,7 +767,7 @@ sendModelToXPS <- function(model) {
 
   fail <- TRUE
   
-  #print(toJSON(model))
+  print(toJSON(model))
   
   while (fail) {
     
