@@ -33,8 +33,8 @@ wiki_sequences <- groupTaskSequences %>% filter(verb_id == "http://id.tincanapi.
 group_sequences <- generateGroupTaskSequences( groupTaskSequences, groupsAndUsers, task)
 
 forum_wordcount <- calculateForumWordcountFun(forum_sequences, groupsAndUsers)
-#wiki_wordcount <- calculateWikiWordcountFun(wiki_sequences, groupsAndUsers)
-wiki_wordcount <- getGroupWeightedWikiWordcountAll(course, taskId , as.numeric(Sys.time()), groupsAndUsers)
+wiki_wordcount <- calculateWikiWordcountFun(wiki_sequences, groupsAndUsers)
+#wiki_wordcount <- getGroupWeightedWikiWordcountAll(course, taskId , as.numeric(Sys.time()), groupsAndUsers)
 
 ### !!! ###
 # ADD SELFASSESSMENT HERE AS WELL
