@@ -172,16 +172,35 @@ generateGroupTaskSequences <- function(sequences, groupsAndUsers, task) {
 
 generateGroupTaskSequencesWithContent <- function(sequences, groupsAndUsers, task) {
   
-  # classify activities
-  ### TODO add classification again when fixed ###
-  data <- classify_activities(sequences, task)
-  #data <- sequences
   
-  data <- data %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated")  %>%  group_by(group_id) %>% do(sequence=select(., -c(group_id)))
+  ### block before start ###
+  # # classify activities
+  # ### TODO add classification again when fixed ###
+  # data <- classify_activities(sequences, task)
+  # #data <- sequences
+  # 
+  # data <- data %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated")  %>%  group_by(group_id) %>% do(sequence=select(., -c(group_id)))
+  # data
+  ### block before end ###
+  
+  data <- data.frame()
+  if(dim(sequences)[1] > 0) {
+    # classify activities
+    
+    ### TODO add classification again when fixed ###
+    data <- classify_activities(sequences, task)
+    # data <- sequences
+    
+    data <- data %>% filter(verb_id == "http://id.tincanapi.com/verb/replied" | verb_id == "http://id.tincanapi.com/verb/updated") %>%  group_by(group_id) %>% do(sequence=select(., -c(group_id)))
+  } else {
+    # empty sequence
+  }
+  
   data
+  
 }
 
-# classify the activities based on the model that ws generated using the mercur mooc data
+# classify the activities based on the model that was generated using the mercur mooc data
 # possible classes: coordination, monitoring, major contribution, minor contribution, other
 classify_activities <- function(data, task) {
   
@@ -324,6 +343,7 @@ classify_activities <- function(data, task) {
     subset(select = -c(wordcount, type, tool_change, idle_since, position, user_change, day, period))
   
   all_data_without_start
+  
 }
 
 calculateSelfAssessmentFun <- function(course, task, timestamp) {
